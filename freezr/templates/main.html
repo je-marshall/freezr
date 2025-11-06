@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+
+{% block header %}
+        <a class="cs-btn" href="{{ url_for('checkin.checkin') }}">IN</a>
+        <a class="cs-btn" href="{{ url_for('checkout.checkout') }}">OUT</a>
+        <a class="cs-btn" href="{{ url_for('move.about') }}">ABOUT</a>
+{% endblock %}
+
+{% block content %}
+    <h1>{% block title %}Entries{% endblock %}</h1>
+        <table style="width:80%; text-align: center; margin: 0px auto", border="1">
+            {% for entry in entries %}
+                <tr>
+                    <td>{{ entry['desc'] }}</td>
+                    <td>{{ entry['age'] }}</td>
+                </tr>
+            {% endfor %}
+        </table>
+{% endblock %}
+<dialog class="cs-dialog">
+    <form method="dialog">
+        <div class="heading">
+            <div class="wrapper">
+                <div class="icon"></div>
+                <p class="text">Check in item</p>
+            </div>
+            <button class="cs-btn close"></button>
+        </div>
+        <div class="content">
+            {% block modal_content %}
+            {% endblock %}
+        </div>
+    </form>
+</dialog>

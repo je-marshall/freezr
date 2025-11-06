@@ -1,0 +1,17 @@
+{% extends 'base.html' %}
+
+{% block header %}
+    <h1>{% block title %}New entry{% endblock %}</h1>
+{% endblock %}
+
+{% block content %}
+    <form method="post">
+        <label for="category">Category</label>
+        <input class="cs-input" name="category" id="category" required>
+        <label for="subcat">Sub-Category</label>
+        <input class="cs-input" name="subcat" id="subcat" required>
+        <label for="subcat">Sub-Sub-Category</label>
+        <input class="cs-input" name="subsub" id="subsub" required>
+        <input class="cs-btn" type="submit" value="Add">
+    </form>
+{% endblock %}

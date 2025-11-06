@@ -1,0 +1,20 @@
+<!doctype html>
+<title>{% block title %}{% endblock %} - Freezr</title>
+<script type="module" src="{{ url_for('static', filename='cs16.js') }}"></script>
+<link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+<nav style="margin: 30px; text-align: center;">
+    <h1><a style="text-align: center;" class="cs-btn" href="{{ url_for('index') }}">FREEZR</a></h1>
+        {% if g.user %}
+           <a disabled class="cs-btn">{{ g.user['username'] }}</a>
+           <a class="cs-btn" href="{{ url_for('auth.logout') }}">Log Out</a>
+        {% endif %}
+</nav>
+<section style="margin: 30px; text-align: center" class="content">
+    <header style="text-align: center">
+        {% block header %}{% endblock %}
+    </header>
+    {% for message in get_flashed_messages() %}
+        <div class="flash">{{ message }}</div>
+    {% endfor %}
+    {% block content %}{% endblock %}
+</section>
