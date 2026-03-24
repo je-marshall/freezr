@@ -1,9 +1,9 @@
 {% extends 'base.html' %}
 
 {% block header %}
-    <div style="display: flex; width: 80%; margin: 0 auto; gap: 15px; align-items: stretch;">
+    <div style="display: flex; width: 90%; margin: 0 auto; gap: 15px; align-items: stretch; box-sizing: border-box; height: 68px;">
         
-        <button class="cs-btn" type="button" style="width: 60px; flex-shrink: 0; display: flex; justify-content: center; align-items: center; border-radius: 0; cursor: pointer; text-decoration: none;">
+        <button class="cs-btn" type="button" style="width: 68px; flex-shrink: 0; display: flex; justify-content: center; align-items: center; border-radius: 0; cursor: pointer; text-decoration: none;">
             <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="3" y="3" width="7" height="7"></rect>
                 <rect x="14" y="3" width="7" height="7"></rect>
@@ -17,11 +17,11 @@
             </svg>
         </button>
 
-        <button id="btn-checkin" class="cs-btn" style="font-size: 1.5rem; padding: 15px 30px; font-weight: bold; text-decoration: none; cursor: pointer; border-radius: 0; flex-shrink: 0;">CHECK IN</button>
+        <button id="btn-checkin" class="cs-btn" style="font-size: 1.5rem; padding: 0 30px; font-weight: bold; text-decoration: none; cursor: pointer; border-radius: 0; flex-shrink: 0;">CHECK IN</button>
 
-        <input type="text" class="cs-input" placeholder="Search inventory..." style="flex-grow: 1; border-radius: 0; padding: 10px 15px; font-size: 1.2rem; font-weight: bold; min-width: 0;">
+        <input type="text" class="cs-input" placeholder="Search inventory..." style="flex-grow: 1; border-radius: 0; padding: 0 15px; font-size: 1.2rem; font-weight: bold; min-width: 0;">
 
-        <button class="cs-btn" type="button" style="width: 60px; flex-shrink: 0; display: flex; justify-content: center; align-items: center; border-radius: 0; cursor: pointer; text-decoration: none;">
+        <button class="cs-btn" type="button" style="width: 68px; flex-shrink: 0; display: flex; justify-content: center; align-items: center; border-radius: 0; cursor: pointer; text-decoration: none;">
             <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="11" cy="11" r="8"></circle>
                 <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
@@ -32,15 +32,40 @@
 {% endblock %}
 
 {% block content %}
-    <h1 style="font-weight: bold;">{% block title %}Inventory{% endblock %}</h1>
+    <style>
+        .scroll-container {
+            scrollbar-gutter: stable;
+            overflow-y: auto;
+        }
+        .scroll-container::-webkit-scrollbar {
+            width: 14px;
+        }
+        .scroll-container::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05); 
+            border-left: 1px solid rgba(0, 0, 0, 0.1); 
+        }
+        .scroll-container::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.2); 
+            border-radius: 0; 
+            border: 2px solid transparent;
+            background-clip: padding-box;
+        }
+        .scroll-container::-webkit-scrollbar-thumb:hover {
+            background-color: rgba(0, 0, 0, 0.4); 
+        }
+    </style>
+
+    <h1 style="font-weight: bold; margin-bottom: 20px;">{% block title %}Inventory{% endblock %}</h1>
     
-    <div style="max-height: 60vh; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; width: 80%; margin: 0 auto; padding-right: 10px;">
+    <div class="scroll-container" style="width: 90%; margin: 0 auto; max-height: 55vh; display: flex; flex-direction: column; gap: 10px; padding-right: 5px; box-sizing: border-box;">
         {% for entry in entries %}
-            <div class="entry-item cs-btn" data-id="{{ entry.id }}" style="display: flex; justify-content: space-between; align-items: center; padding: 15px 20px; cursor: pointer; text-align: left; border-radius: 0; text-decoration: none;">
-                <div>
-                    <strong style="font-size: 1.2rem; display: block; font-weight: bold;">{{ entry.desc | capitalize }}</strong>
-                    <span style="font-size: 0.9rem; opacity: 0.8; font-weight: normal;">{{ entry.location }}</span>
+            <div class="entry-item cs-btn" data-id="{{ entry.id }}" style="display: flex; justify-content: space-between; align-items: center; padding: 0 20px; height: 68px; box-sizing: border-box; cursor: pointer; text-align: left; border-radius: 0; text-decoration: none;">
+                
+                <div style="display: flex; flex-direction: column; justify-content: center; gap: 6px;">
+                    <strong style="font-size: 1.2rem; display: block; font-weight: bold; line-height: 1;">{{ entry.desc | capitalize }}</strong>
+                    <span style="font-size: 0.9rem; opacity: 0.8; font-weight: normal; line-height: 1;">{{ entry.location }}</span>
                 </div>
+                
                 <div style="text-align: right; opacity: 0.8; font-size: 0.9rem; font-weight: normal;">
                     {{ entry.age }}
                 </div>
@@ -61,7 +86,6 @@
         
         <div class="content" style="padding: 20px; text-align: left;">
             <form method="POST" action="{{ url_for('checkin.checkin') }}" style="display: flex; flex-direction: column; gap: 15px;">
-                
                 <div>
                     <label style="display: block; font-weight: bold; margin-bottom: 5px;">Category:</label>
                     <select id="category" name="category" required class="cs-select" style="width: 100%; padding: 5px; font-weight: bold;">
@@ -140,8 +164,7 @@
         
         <div class="content" style="padding: 20px; text-align: left; display: flex; flex-direction: column; gap: 15px;">
             
-            <div id="view-dynamic-fields" style="display: flex; flex-direction: column; gap: 10px;">
-                </div>
+            <div id="view-dynamic-fields" style="display: flex; flex-direction: column; gap: 10px;"></div>
 
             <div id="view-notes-container" style="display: none;">
                 <label style="display: block; font-weight: bold; margin-bottom: 5px;">Notes:</label>
@@ -161,6 +184,24 @@
             subsubs: {{ subsubs | tojson | safe }},
             entries: {{ entries | tojson | safe }}
         };
+
+        // NEW: Close any dialog when clicking outside of it
+        document.querySelectorAll('.cs-dialog').forEach(dialog => {
+            dialog.addEventListener('click', (event) => {
+                const rect = dialog.getBoundingClientRect();
+                // Check if the click coordinates are outside the modal's physical bounds
+                const isInDialog = (
+                    rect.top <= event.clientY && 
+                    event.clientY <= rect.top + rect.height &&
+                    rect.left <= event.clientX && 
+                    event.clientX <= rect.left + rect.width
+                );
+                
+                if (!isInDialog) {
+                    dialog.close();
+                }
+            });
+        });
     </script>
     <script src="{{ url_for('static', filename='checkin.js') }}"></script>
 {% endblock %}

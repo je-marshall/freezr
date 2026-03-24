@@ -3,7 +3,7 @@
 <script type="module" src="{{ url_for('static', filename='cs16.js') }}"></script>
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 
-<nav style="width: 80%; margin: 30px auto; display: flex; justify-content: space-between; align-items: center;">
+<nav style="width: 90%; margin: 30px auto; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;">
     
     <div>
         <a class="cs-btn" href="{{ url_for('index') }}" style="font-weight: bold; text-decoration: none; padding: 10px 20px;">FREEZR</a>
@@ -27,7 +27,7 @@
     </header>
     
     {% for message in get_flashed_messages() %}
-        <div class="flash" style="width: 80%; margin: 10px auto; padding: 10px; border-radius: 5px; font-weight: bold;">
+        <div class="flash" style="width: 90%; margin: 10px auto; padding: 10px; border-radius: 5px; font-weight: bold; box-sizing: border-box;">
             {{ message }}
         </div>
     {% endfor %}
