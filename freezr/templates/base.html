@@ -2,19 +2,54 @@
 <title>{% block title %}{% endblock %} - Freezr</title>
 <script type="module" src="{{ url_for('static', filename='cs16.js') }}"></script>
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-<nav style="margin: 30px; text-align: center;">
-    <h1><a style="text-align: center;" class="cs-btn" href="{{ url_for('index') }}">FREEZR</a></h1>
+
+<nav style="width: 80%; margin: 30px auto; display: flex; justify-content: space-between; align-items: center;">
+    
+    <div>
+        <a class="cs-btn" href="{{ url_for('index') }}" style="font-weight: bold; text-decoration: none; padding: 10px 20px;">FREEZR</a>
+    </div>
+    
+    <div style="display: flex; gap: 10px;">
         {% if g.user %}
-           <a disabled class="cs-btn">{{ g.user['username'] }}</a>
-           <a class="cs-btn" href="{{ url_for('auth.logout') }}">Log Out</a>
+            <button class="cs-btn" style="font-weight: bold; text-decoration: none; padding: 10px 20px; cursor: pointer;" onclick="document.getElementById('logout-modal').showModal()">
+                {{ g.user['username'] }}
+            </button>
+        {% else %}
+            <a class="cs-btn" href="{{ url_for('auth.register') }}" style="font-weight: bold; text-decoration: none; padding: 10px 20px;">Register</a>
+            <a class="cs-btn" href="{{ url_for('auth.login') }}" style="font-weight: bold; text-decoration: none; padding: 10px 20px;">Log In</a>
         {% endif %}
+    </div>
 </nav>
-<section style="margin: 30px; text-align: center" class="content">
-    <header style="text-align: center">
+
+<section style="text-align: center" class="content">
+    <header style="text-align: center; margin-bottom: 20px;">
         {% block header %}{% endblock %}
     </header>
+    
     {% for message in get_flashed_messages() %}
-        <div class="flash">{{ message }}</div>
+        <div class="flash" style="width: 80%; margin: 10px auto; padding: 10px; border-radius: 5px; font-weight: bold;">
+            {{ message }}
+        </div>
     {% endfor %}
+    
     {% block content %}{% endblock %}
 </section>
+
+{% if g.user %}
+<dialog id="logout-modal" class="cs-dialog">
+    <div class="heading">
+        <div class="wrapper">
+            <div class="icon"></div>
+            <p class="text">Ready to leave?</p>
+        </div>
+        <button class="cs-btn close" onclick="document.getElementById('logout-modal').close()"></button>
+    </div>
+    <div class="content" style="text-align: center; padding: 20px;">
+        <p style="margin-bottom: 20px;">Are you sure you want to log out, {{ g.user['username'] }}?</p>
+        <div style="display: flex; justify-content: center; gap: 15px;">
+            <button class="cs-btn" style="font-weight: bold;" onclick="document.getElementById('logout-modal').close()">Cancel</button>
+            <a class="cs-btn" style="font-weight: bold; text-decoration: none;" href="{{ url_for('auth.logout') }}">Log Out</a>
+        </div>
+    </div>
+</dialog>
+{% endif %}

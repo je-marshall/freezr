@@ -2,8 +2,8 @@ DROP TABLE IF EXISTS user;
 DROP TABLE IF EXISTS categories;
 DROP TABLE IF EXISTS subcats;
 DROP TABLE IF EXISTS subsub;
+DROP TABLE IF EXISTS freezers;
 DROP TABLE IF EXISTS entries;
-
 
 CREATE TABLE user (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -28,11 +28,20 @@ CREATE TABLE subsub (
     subsub TEXT NOT NULL
 );
 
+CREATE TABLE freezers (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    drawers INTEGER NOT NULL,
+    location TEXT
+);
+
 CREATE TABLE entries (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     category_id INTEGER NOT NULL REFERENCES categories (id),
     subcat_id INTEGER NOT NULL REFERENCES subcats (id),
-    subsub INTEGER NOT NULL REFERENCES subsub (id),
+    subsub INTEGER REFERENCES subsub (id), -- Note: Removed NOT NULL so this can be optional
+    freezer_id INTEGER NOT NULL REFERENCES freezers (id),
+    drawer INTEGER NOT NULL,
     skin BOOLEAN NOT NULL CHECK (skin IN (0, 1)) DEFAULT 0,
     bone BOOLEAN NOT NULL CHECK (bone IN (0, 1)) DEFAULT 0,
     minced BOOLEAN NOT NULL CHECK (minced IN (0, 1)) DEFAULT 0,
@@ -44,6 +53,7 @@ CREATE TABLE entries (
     auth_id INTEGER NOT NULL REFERENCES user (id)
 );
 
+-- Insert your original categories
 INSERT INTO categories (id, category)
     VALUES (1, 'meat'),
            (2, 'dairy'),
@@ -99,3 +109,10 @@ INSERT INTO subsub (subcat_id, id, subsub)
            (3, NULL, 'neck'),
            (3, NULL, 'leg'),
            (3, NULL, 'hock');
+
+-- Insert your custom freezers
+INSERT INTO freezers (name, drawers, location)
+    VALUES ('Main Kitchen Freezer', 3, 'Kitchen'),
+           ('Red Garage Freezer', 3, 'Garage'),
+           ('Grey Garage Freezer', 3, 'Garage'),
+           ('Small Garage Freezer', 1, 'Garage');
