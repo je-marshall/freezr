@@ -28,7 +28,9 @@ def create_app(test_config=None):
     app.register_blueprint(checkin.bp)
     from . import checkout
     app.register_blueprint(checkout.bp)
-    from .import move
+    from . import move
     app.register_blueprint(move.bp)
+    from . import api
+    app.register_blueprint(api.bp)
     app.add_url_rule('/', endpoint='index')
     return app

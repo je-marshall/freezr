@@ -4,6 +4,7 @@ from flask import (
 )
 from werkzeug.security import check_password_hash, generate_password_hash
 from freezr.db import get_db
+import jwt
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -74,4 +75,19 @@ def login_required(view):
         if g.user is None:
             return redirect(url_for('auth.login'))
         return view(**kwargs)
+    return wrapped_view
+
+def authorise(view):
+    @functools.wraps(view)
+    def wrapped_view(*args, **kwargs):
+        if not 'Authorisation' in request.headers:
+            abort(401)
+        username = None
+        data = request.headers['Authorisation'].encode('ascii', 'ignore')
+        token = str.replace(str(data), 'Bearer ', '')
+        try:
+            user = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])['sub']
+        except:
+            abort(401)
+        return view(user, *args, **kwargs)
     return wrapped_view
