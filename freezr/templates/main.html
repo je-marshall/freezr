@@ -172,9 +172,68 @@
             </div>
 
             <div style="display: flex; justify-content: space-between; gap: 10px; margin-top: 20px;">
-                <button type="button" class="cs-btn" style="flex: 1; font-weight: bold; text-decoration: none; font-size: 1.1rem; padding: 10px;">MOVE</button>
-                <button type="button" class="cs-btn" style="flex: 1; font-weight: bold; text-decoration: none; font-size: 1.1rem; padding: 10px;">CHECK OUT</button>
+                <button type="button" id="btn-move-init" class="cs-btn" style="flex: 1; font-weight: bold; text-decoration: none; font-size: 1.1rem; padding: 10px;">MOVE</button>
+                <button type="button" id="btn-checkout-init" class="cs-btn" style="flex: 1; font-weight: bold; text-decoration: none; font-size: 1.1rem; padding: 10px;">CHECK OUT</button>
             </div>
+        </div>
+    </dialog>
+
+    <dialog id="confirm-delete-modal" class="cs-dialog">
+        <div class="heading">
+            <div class="wrapper">
+                <div class="icon"></div>
+                <p class="text" style="font-weight: bold;">Confirm Check Out</p>
+            </div>
+            <button id="btn-close-confirm" class="cs-btn close" style="text-decoration: none;"></button>
+        </div>
+        
+        <div class="content" style="padding: 20px; text-align: center; display: flex; flex-direction: column; gap: 15px;">
+            <p style="font-size: 1.1rem;">Are you sure you want to completely remove this item from your freezer?</p>
+            
+            <form method="POST" action="{{ url_for('checkout.checkout') }}" style="display: flex; justify-content: space-between; gap: 10px; margin-top: 20px;">
+                <input type="hidden" name="entry_id" id="checkout-entry-id" value="">
+                <button type="button" id="btn-cancel-confirm" class="cs-btn" style="flex: 1; font-weight: bold; text-decoration: none; font-size: 1.1rem; padding: 10px;">Cancel</button>
+                <button type="submit" class="cs-btn" style="flex: 1; font-weight: bold; text-decoration: none; font-size: 1.1rem; padding: 10px; background-color: #c0392b; color: #ffffff; border-top-color: #e74c3c; border-left-color: #e74c3c; border-bottom-color: #78231a; border-right-color: #78231a;">Delete</button>
+            </form>
+        </div>
+    </dialog>
+
+    <dialog id="move-modal" class="cs-dialog">
+        <div class="heading">
+            <div class="wrapper">
+                <div class="icon"></div>
+                <p class="text" style="font-weight: bold;">Move Item</p>
+            </div>
+            <button id="btn-close-move" class="cs-btn close" style="text-decoration: none;"></button>
+        </div>
+        
+        <div class="content" style="padding: 20px; text-align: left;">
+            <form method="POST" action="{{ url_for('move.move') }}" style="display: flex; flex-direction: column; gap: 15px;">
+                <input type="hidden" name="entry_id" id="move-entry-id" value="">
+                
+                <div style="display: flex; gap: 10px;">
+                    <div style="flex: 2;">
+                        <label style="display: block; font-weight: bold; margin-bottom: 5px;">New Freezer:</label>
+                        <select id="move-freezer" name="freezer" required class="cs-select" style="width: 100%; padding: 5px; font-weight: bold;">
+                            <option value="">-- Select Freezer --</option>
+                            {% for freezer in freezers %}
+                                <option value="{{ freezer.id }}" data-drawers="{{ freezer.drawers | default(4) }}">{{ freezer.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div style="flex: 1;">
+                        <label style="display: block; font-weight: bold; margin-bottom: 5px;">New Drawer:</label>
+                        <select id="move-drawer" name="drawer" required class="cs-select" style="width: 100%; padding: 5px; font-weight: bold;">
+                            <option value="">-- Select Drawer --</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
+                    <button id="btn-cancel-move" type="button" class="cs-btn" style="font-weight: bold; text-decoration: none;">Cancel</button>
+                    <button type="submit" class="cs-btn" style="font-weight: bold; text-decoration: none;">Confirm Move</button>
+                </div>
+            </form>
         </div>
     </dialog>
 
@@ -184,24 +243,7 @@
             subsubs: {{ subsubs | tojson | safe }},
             entries: {{ entries | tojson | safe }}
         };
-
-        // NEW: Close any dialog when clicking outside of it
-        document.querySelectorAll('.cs-dialog').forEach(dialog => {
-            dialog.addEventListener('click', (event) => {
-                const rect = dialog.getBoundingClientRect();
-                // Check if the click coordinates are outside the modal's physical bounds
-                const isInDialog = (
-                    rect.top <= event.clientY && 
-                    event.clientY <= rect.top + rect.height &&
-                    rect.left <= event.clientX && 
-                    event.clientX <= rect.left + rect.width
-                );
-                
-                if (!isInDialog) {
-                    dialog.close();
-                }
-            });
-        });
     </script>
     <script src="{{ url_for('static', filename='checkin.js') }}"></script>
+    <script src="{{ url_for('static', filename='inventory.js') }}"></script>
 {% endblock %}
