@@ -5,8 +5,9 @@
 
 <nav style="width: 90%; margin: 30px auto; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;">
     
-    <div>
+    <div style="display: flex; align-items: center; gap: 15px;">
         <a class="cs-btn" href="{{ url_for('index') }}" style="font-weight: bold; text-decoration: none; padding: 10px 20px;">FREEZR</a>
+        <span style="font-weight: bold; font-size: 1.2rem; letter-spacing: 1px;">FREEZER INVENTORY MANAGEMENT SYSTEM</span>
     </div>
     
     <div style="display: flex; gap: 10px;">
@@ -27,8 +28,9 @@
     </header>
     
     {% for message in get_flashed_messages() %}
-        <div class="flash" style="width: 90%; margin: 10px auto; padding: 10px; border-radius: 5px; font-weight: bold; box-sizing: border-box;">
-            {{ message }}
+        {% set display_message = 'ITEM CHECKED IN' if 'successfully added' in message.lower() else message %}
+        <div class="flash" style="width: 90%; margin: 10px auto; padding: 10px; border-radius: 0; font-weight: bold; box-sizing: border-box; color: #f1c40f; border: 2px solid #f1c40f; text-transform: uppercase;">
+            {{ display_message }}
         </div>
     {% endfor %}
     

@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 
+{% block title %}Inventory{% endblock %}
+
 {% block header %}
     <div style="display: flex; width: 90%; margin: 0 auto; gap: 15px; align-items: stretch; box-sizing: border-box; height: 68px;">
         
@@ -19,9 +21,9 @@
 
         <button id="btn-checkin" class="cs-btn" style="font-size: 1.5rem; padding: 0 30px; font-weight: bold; text-decoration: none; cursor: pointer; border-radius: 0; flex-shrink: 0;">CHECK IN</button>
 
-        <input type="text" class="cs-input" placeholder="Search inventory..." style="flex-grow: 1; border-radius: 0; padding: 0 15px; font-size: 1.2rem; font-weight: bold; min-width: 0;">
+        <input type="text" id="search-input" class="cs-input" placeholder="Search inventory..." style="flex-grow: 1; border-radius: 0; padding: 0 15px; font-size: 1.2rem; font-weight: bold; min-width: 0;">
 
-        <button class="cs-btn" type="button" style="width: 68px; flex-shrink: 0; display: flex; justify-content: center; align-items: center; border-radius: 0; cursor: pointer; text-decoration: none;">
+        <button id="btn-search" class="cs-btn" type="button" style="width: 68px; flex-shrink: 0; display: flex; justify-content: center; align-items: center; border-radius: 0; cursor: pointer; text-decoration: none;">
             <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="11" cy="11" r="8"></circle>
                 <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
@@ -54,8 +56,6 @@
             background-color: rgba(0, 0, 0, 0.4); 
         }
     </style>
-
-    <h1 style="font-weight: bold; margin-bottom: 20px;">{% block title %}Inventory{% endblock %}</h1>
     
     <div class="scroll-container" style="width: 90%; margin: 0 auto; max-height: 55vh; display: flex; flex-direction: column; gap: 10px; padding-right: 5px; box-sizing: border-box;">
         {% for entry in entries %}
@@ -168,7 +168,7 @@
 
             <div id="view-notes-container" style="display: none;">
                 <label style="display: block; font-weight: bold; margin-bottom: 5px;">Notes:</label>
-                <textarea id="view-notes" class="cs-input" disabled rows="2" style="width: 100%; padding: 5px;"></textarea>
+                <textarea id="view-notes" class="cs-input" disabled rows="2" style="width: 100%; padding: 5px; color: white; -webkit-text-fill-color: white; opacity: 1;"></textarea>
             </div>
 
             <div style="display: flex; justify-content: space-between; gap: 10px; margin-top: 20px;">
@@ -246,4 +246,5 @@
     </script>
     <script src="{{ url_for('static', filename='checkin.js') }}"></script>
     <script src="{{ url_for('static', filename='inventory.js') }}"></script>
+    <script src="{{ url_for('static', filename='search.js') }}"></script>
 {% endblock %}

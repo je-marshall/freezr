@@ -53,7 +53,7 @@ def checkin():
                 (category, subcat, subsub, freezer, drawer, skin, bone, minced, grated, cooked, notes, quantity, g.user['id']),
             )
             db.commit()
-            flash('Item successfully checked into the freezer!')
+            flash('ITEM CHECKED IN')
         except db.IntegrityError as e:
             error = f'An error occurred while saving the entry: {e}'
             flash(error)
