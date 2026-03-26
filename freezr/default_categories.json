@@ -1,0 +1,12 @@
+{
+    "Sausage": { "Sausage": ["diot", "morteau", "espellete", "mergeuz", "cumberland", "lincoln", "pork"] },
+    "Poultry": { "Chicken": ["breast", "wing", "leg", "thigh", "supreme", "whole", "giblets", "liver"] },
+    "Pork": { "Pork": ["chop", "tenderloin", "loin", "belly", "shoulder"] },
+    "Beef": { "Beef": ["steak", "brisket", "rib", "chuck"] },
+    "Venison": { "Venison": ["haunch", "saddle"] },
+    "Lamb": { "Lamb": ["leg", "shoulder", "rack", "shank"] },
+    "Game": { "Pheasant": ["breast", "leg", "whole"] },
+    "Duck": { "Duck": ["breast", "leg", "whole"] },
+    "Dairy": { "Cheese": ["cheddar", "mozzarella", "parmesan", "brie"], "Cream": [], "Milk": [] },
+    "Bread": { "Loaf": ["white", "wholemeal", "sourdough", "focaccia"], "Bun": ["burger", "hotdog"], "Croissant": [] }
+}
