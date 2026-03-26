@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const checkinModal = document.getElementById('checkin-modal');
     const closeBtn = document.getElementById('btn-close-modal');
     const cancelBtn = document.getElementById('btn-cancel-modal');
+    const checkinForm = checkinModal ? checkinModal.querySelector('form') : null;
 
     if (checkinBtn && checkinModal) {
         checkinBtn.addEventListener('click', () => checkinModal.showModal());
@@ -31,21 +32,16 @@ document.addEventListener('DOMContentLoaded', function() {
     if (catSelect) {
         catSelect.addEventListener('change', function() {
             const catId = parseInt(this.value);
-
-            // Reset lower tier dropdowns
             document.getElementById('subcat-container').style.display = 'none';
             subcatSelect.required = false;
             subcatSelect.innerHTML = '<option value="">-- Select Sub-Category --</option>';
-
             document.getElementById('subsub-container').style.display = 'none';
             subsubSelect.required = false;
             subsubSelect.innerHTML = '<option value="">-- Select Type --</option>';
 
-            // Update Checkboxes based on category rules
             ['skin', 'bone', 'minced', 'grated', 'cooked'].forEach(flag => {
                 const label = document.getElementById('lbl-' + flag);
                 const checkbox = document.getElementById('chk-' + flag);
-                
                 if (catId && catRules[catId] && catRules[catId].includes(flag)) {
                     label.style.display = 'inline-block';
                 } else {
@@ -55,7 +51,6 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             if (!catId) return;
-
             const filteredSubcats = subcats.filter(s => s.category_id === catId);
             if (filteredSubcats.length > 0) {
                 filteredSubcats.forEach(s => {
@@ -70,13 +65,11 @@ document.addEventListener('DOMContentLoaded', function() {
     if (subcatSelect) {
         subcatSelect.addEventListener('change', function() {
             const subcatId = parseInt(this.value);
-
             document.getElementById('subsub-container').style.display = 'none';
             subsubSelect.required = false;
             subsubSelect.innerHTML = '<option value="">-- Select Type --</option>';
 
             if (!subcatId) return;
-
             const filteredSubsubs = subsubs.filter(s => s.subcat_id === subcatId);
             if (filteredSubsubs.length > 0) {
                 filteredSubsubs.forEach(s => {
@@ -96,16 +89,47 @@ document.addEventListener('DOMContentLoaded', function() {
         freezerSelect.addEventListener('change', function() {
             drawerSelect.innerHTML = '<option value="">-- Select Drawer --</option>';
             drawerSelect.required = false;
-
             if (!this.value) return;
-
             const selectedOption = this.options[this.selectedIndex];
             const numDrawers = parseInt(selectedOption.getAttribute('data-drawers')) || 4;
-
             for (let i = 1; i <= numDrawers; i++) {
                 drawerSelect.innerHTML += `<option value="${i}">${i}</option>`;
             }
             drawerSelect.required = true;
+        });
+    }
+
+    // --- 4. AJAX Submission & Printing ---
+    if (checkinForm) {
+        checkinForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const formData = new FormData(checkinForm);
+            
+            try {
+                const response = await fetch(checkinForm.action, {
+                    method: 'POST',
+                    body: formData
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    // Check if print was requested
+                    if (formData.get('print_label')) {
+                        // Use the trigger function from inventory.js
+                        if (typeof window.triggerPrint === "function") {
+                            window.triggerPrint(result.entry_id, result.description);
+                        }
+                    }
+                    // Reload to show the new item in the list
+                    window.location.reload();
+                } else {
+                    alert('Error saving item: ' + (result.message || 'Unknown error'));
+                }
+            } catch (err) {
+                console.error('Submission failed:', err);
+                // Fallback: if JSON fails, just submit normally
+                checkinForm.submit();
+            }
         });
     }
 });
