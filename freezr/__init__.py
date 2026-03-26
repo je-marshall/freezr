@@ -15,22 +15,39 @@ def create_app(test_config=None):
         os.makedirs(app.instance_path)
     except OSError:
         pass
+        
     @app.route('/hello')
     def hello():
         return 'Hello, World!'
+        
     from . import db
     db.init_app(app)
+    
     from . import auth
     app.register_blueprint(auth.bp)
+    
     from . import index
     app.register_blueprint(index.bp)
+    
     from . import checkin
     app.register_blueprint(checkin.bp)
+    
     from . import checkout
     app.register_blueprint(checkout.bp)
+    
     from . import move
     app.register_blueprint(move.bp)
+    
     from . import api
     app.register_blueprint(api.bp)
+    
+    from . import freezers
+    app.register_blueprint(freezers.bp)
+    
+    # NEW: Registering our upcoming categories blueprint
+    from . import categories
+    app.register_blueprint(categories.bp)
+    
     app.add_url_rule('/', endpoint='index')
+    
     return app

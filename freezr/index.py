@@ -12,6 +12,7 @@ bp = Blueprint('index', __name__)
 @login_required
 def index():
     db = get_db()
+    # get_all_entries now automatically filters by the logged-in user thanks to our helpers.py update
     all_entries = get_all_entries()
     generate_description(all_entries)
     
@@ -19,7 +20,12 @@ def index():
     categories = db.execute('SELECT * FROM categories').fetchall()
     subcats = db.execute('SELECT * FROM subcats').fetchall()
     subsubs = db.execute('SELECT * FROM subsub').fetchall()
-    freezers = db.execute('SELECT * FROM freezers').fetchall()
+    
+    # UPDATED: Strictly filter freezers so users only see their own!
+    freezers = db.execute(
+        'SELECT * FROM freezers WHERE auth_id = ?', 
+        (g.user['id'],)
+    ).fetchall()
     
     return render_template('main.html', entries=all_entries, categories=categories, 
                            subcats=subcats, subsubs=subsubs, freezers=freezers)

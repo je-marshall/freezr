@@ -3,10 +3,10 @@
 {% block title %}Inventory{% endblock %}
 
 {% block header %}
-    <div style="display: flex; width: 90%; margin: 0 auto; gap: 15px; align-items: stretch; box-sizing: border-box; height: 68px;">
+    <div style="display: flex; width: 100%; margin: 0 auto; gap: 15px; align-items: stretch; box-sizing: border-box;">
         
-        <button class="cs-btn" type="button" style="width: 68px; flex-shrink: 0; display: flex; justify-content: center; align-items: center; border-radius: 0; cursor: pointer; text-decoration: none;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <button id="btn-scan-init" class="cs-btn" type="button" style="padding: 10px; display: flex; justify-content: center; align-items: center; cursor: pointer; text-decoration: none;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="3" y="3" width="7" height="7"></rect>
                 <rect x="14" y="3" width="7" height="7"></rect>
                 <rect x="14" y="14" width="7" height="7"></rect>
@@ -14,17 +14,17 @@
                 <rect x="7" y="18" width="3" height="3"></rect>
                 <line x1="9" y1="9" x2="9.01" y2="9"></line>
                 <line x1="20" y1="9" x2="20.01" y2="9"></line>
-                <line x1="20" y1="20" x2="20.01" y2="20"></line>
-                <line x1="9" y1="20" x2="9.01" y2="20"></line>
             </svg>
         </button>
-
-        <button id="btn-checkin" class="cs-btn" style="font-size: 1.5rem; padding: 0 30px; font-weight: bold; text-decoration: none; cursor: pointer; border-radius: 0; flex-shrink: 0;">CHECK IN</button>
-
-        <input type="text" id="search-input" class="cs-input" placeholder="Search inventory..." style="flex-grow: 1; border-radius: 0; padding: 0 15px; font-size: 1.2rem; font-weight: bold; min-width: 0;">
-
-        <button id="btn-search" class="cs-btn" type="button" style="width: 68px; flex-shrink: 0; display: flex; justify-content: center; align-items: center; border-radius: 0; cursor: pointer; text-decoration: none;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+        
+        <button id="btn-checkin" class="cs-btn" type="button" style="padding: 10px 20px; font-weight: bold; cursor: pointer; text-decoration: none; display: flex; align-items: center;">
+            Check In
+        </button>
+        
+        <input type="text" id="search-input" class="cs-input" placeholder="Search inventory..." style="flex-grow: 1; padding: 10px; font-weight: bold; font-size: 1rem; border: 2px solid var(--border-light); background-color: var(--secondary-bg); color: var(--text);">
+        
+        <button id="btn-search" class="cs-btn" type="button" style="padding: 10px; display: flex; justify-content: center; align-items: center; cursor: pointer; text-decoration: none;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="11" cy="11" r="8"></circle>
                 <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
             </svg>
@@ -34,29 +34,14 @@
 {% endblock %}
 
 {% block content %}
-    <style>
-        .scroll-container {
-            scrollbar-gutter: stable;
-            overflow-y: auto;
-        }
-        .scroll-container::-webkit-scrollbar {
-            width: 14px;
-        }
-        .scroll-container::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.05); 
-            border-left: 1px solid rgba(0, 0, 0, 0.1); 
-        }
-        .scroll-container::-webkit-scrollbar-thumb {
-            background: rgba(0, 0, 0, 0.2); 
-            border-radius: 0; 
-            border: 2px solid transparent;
-            background-clip: padding-box;
-        }
-        .scroll-container::-webkit-scrollbar-thumb:hover {
-            background-color: rgba(0, 0, 0, 0.4); 
-        }
-    </style>
-    
+    <div id="print-area">
+        <div id="qrcode-container"></div>
+        <div class="print-text-container">
+            <h2 id="print-desc"></h2>
+            <p id="print-date"></p>
+        </div>
+    </div>
+
     <div class="scroll-container" style="width: 90%; margin: 0 auto; max-height: 55vh; display: flex; flex-direction: column; gap: 10px; padding-right: 5px; box-sizing: border-box;">
         {% for entry in entries %}
             <div class="entry-item cs-btn" data-id="{{ entry.id }}" style="display: flex; justify-content: space-between; align-items: center; padding: 0 20px; height: 68px; box-sizing: border-box; cursor: pointer; text-align: left; border-radius: 0; text-decoration: none;">
@@ -67,13 +52,28 @@
                 </div>
                 
                 <div style="text-align: right; opacity: 0.8; font-size: 0.9rem; font-weight: normal;">
-                    {{ entry.age }}
+                    <span class="entry-date-display" data-date="{{ entry.date }}">{{ entry.date }}</span>
                 </div>
             </div>
         {% else %}
             <p style="text-align: center; opacity: 0.7; font-weight: bold;">Your freezer is empty. Better go shopping!</p>
         {% endfor %}
     </div>
+
+    <dialog id="scanner-modal" class="cs-dialog">
+        <div class="heading">
+            <div class="wrapper">
+                <div class="icon"></div>
+                <p class="text" style="font-weight: bold;">Scan QR Code</p>
+            </div>
+            <button id="btn-close-scanner" class="cs-btn close" style="text-decoration: none;"></button>
+        </div>
+        
+        <div class="content" style="padding: 20px; text-align: center;">
+            <div id="reader" style="width: 100%; max-width: 400px; margin: 0 auto; background: var(--secondary-bg); border: 1px solid var(--border-dark);"></div>
+            <button id="btn-cancel-scanner" class="cs-btn danger" style="margin-top: 20px; font-weight: bold; width: 100%; padding: 10px; font-size: 1.1rem;">Cancel Scan</button>
+        </div>
+    </dialog>
 
     <dialog id="checkin-modal" class="cs-dialog">
         <div class="heading">
@@ -145,9 +145,14 @@
                     <textarea name="notes" rows="2" class="cs-input" style="width: 100%; padding: 5px;" placeholder="e.g. For Friday's curry..."></textarea>
                 </div>
 
-                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
-                    <button id="btn-cancel-modal" type="button" class="cs-btn" style="font-weight: bold; text-decoration: none;">Cancel</button>
-                    <button type="submit" class="cs-btn" style="font-weight: bold; text-decoration: none;">Save Item</button>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                    <label style="font-weight: bold; cursor: pointer;">
+                        <input type="checkbox" name="print_label" value="1" class="cs-checkbox" checked> Print QR Label
+                    </label>
+                    <div style="display: flex; gap: 10px;">
+                        <button id="btn-cancel-modal" type="button" class="cs-btn" style="font-weight: bold; text-decoration: none;">Cancel</button>
+                        <button type="submit" class="cs-btn" style="font-weight: bold; text-decoration: none;">Save Item</button>
+                    </div>
                 </div>
             </form>
         </div>
@@ -168,10 +173,11 @@
 
             <div id="view-notes-container" style="display: none;">
                 <label style="display: block; font-weight: bold; margin-bottom: 5px;">Notes:</label>
-                <textarea id="view-notes" class="cs-input" disabled rows="2" style="width: 100%; padding: 5px; color: white; -webkit-text-fill-color: white; opacity: 1;"></textarea>
+                <textarea id="view-notes" class="cs-input" disabled rows="2" style="width: 100%; padding: 5px; color: white !important; -webkit-text-fill-color: white; opacity: 1; resize: none;"></textarea>
             </div>
 
             <div style="display: flex; justify-content: space-between; gap: 10px; margin-top: 20px;">
+                <button type="button" id="btn-print-init" class="cs-btn" style="flex: 1; font-weight: bold; text-decoration: none; font-size: 1.1rem; padding: 10px;">PRINT</button>
                 <button type="button" id="btn-move-init" class="cs-btn" style="flex: 1; font-weight: bold; text-decoration: none; font-size: 1.1rem; padding: 10px;">MOVE</button>
                 <button type="button" id="btn-checkout-init" class="cs-btn" style="flex: 1; font-weight: bold; text-decoration: none; font-size: 1.1rem; padding: 10px;">CHECK OUT</button>
             </div>
@@ -193,7 +199,7 @@
             <form method="POST" action="{{ url_for('checkout.checkout') }}" style="display: flex; justify-content: space-between; gap: 10px; margin-top: 20px;">
                 <input type="hidden" name="entry_id" id="checkout-entry-id" value="">
                 <button type="button" id="btn-cancel-confirm" class="cs-btn" style="flex: 1; font-weight: bold; text-decoration: none; font-size: 1.1rem; padding: 10px;">Cancel</button>
-                <button type="submit" class="cs-btn" style="flex: 1; font-weight: bold; text-decoration: none; font-size: 1.1rem; padding: 10px; background-color: #c0392b; color: #ffffff; border-top-color: #e74c3c; border-left-color: #e74c3c; border-bottom-color: #78231a; border-right-color: #78231a;">Delete</button>
+                <button type="submit" class="cs-btn danger" style="flex: 1; font-weight: bold; text-decoration: none; font-size: 1.1rem; padding: 10px;">Delete</button>
             </form>
         </div>
     </dialog>
@@ -244,7 +250,12 @@
             entries: {{ entries | tojson | safe }}
         };
     </script>
+    
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
     <script src="{{ url_for('static', filename='checkin.js') }}"></script>
     <script src="{{ url_for('static', filename='inventory.js') }}"></script>
+    <script src="{{ url_for('static', filename='scanner.js') }}"></script>
     <script src="{{ url_for('static', filename='search.js') }}"></script>
 {% endblock %}

@@ -26,6 +26,9 @@ def checkin():
     minced = 1 if request.form.get('minced') else 0
     grated = 1 if request.form.get('grated') else 0
     cooked = 1 if request.form.get('cooked') else 0
+    
+    # NEW: Catch the optional print label checkbox
+    print_label = 1 if request.form.get('print_label') else 0
 
     db = get_db()
     error = None
@@ -46,13 +49,22 @@ def checkin():
 
     if error is None:
         try:
-            db.execute(
+            # We assign the execute result to 'cursor' so we can get the ID of the new item!
+            cursor = db.execute(
                 '''INSERT INTO entries 
                 (category_id, subcat_id, subsub, freezer_id, drawer, skin, bone, minced, grated, cooked, notes, quantity, auth_id) 
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
                 (category, subcat, subsub, freezer, drawer, skin, bone, minced, grated, cooked, notes, quantity, g.user['id']),
             )
             db.commit()
+            
+            # Grab the ID of the item we just created
+            new_id = cursor.lastrowid
+            
+            # If the user kept the Print Label checkbox checked, trigger the hidden print script
+            if print_label:
+                flash(f'PRINT_ID:{new_id}')
+                
             flash('ITEM CHECKED IN')
         except db.IntegrityError as e:
             error = f'An error occurred while saving the entry: {e}'
