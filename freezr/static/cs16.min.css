@@ -66,6 +66,7 @@
         text-align: center !important;
         font-weight: bold !important;
         line-height: 1.1 !important;
+        
         display: -webkit-box !important;
         -webkit-line-clamp: 2 !important;
         -webkit-box-orient: vertical !important;
@@ -91,66 +92,68 @@
    (Applies only to screens 768px or smaller)
    ========================================= */
 @media (max-width: 768px) {
-    /* 1. Stack the Top Navigation */
+    /* 1. Base layout containers stack vertically rather than side-by-side */
     .mobile-nav {
         flex-direction: column !important;
         gap: 15px !important;
         text-align: center !important;
-        margin: 15px auto !important;
     }
-
-    .mobile-nav .nav-title {
-        font-size: 0.9rem !important;
-        line-height: 1.2 !important;
-    }
-
-    /* 2. Fix the Index Toolbar (Check-in, Search) */
-    .mobile-toolbar {
-        flex-direction: column !important;
-        gap: 15px !important;
-    }
-    .mobile-toolbar .search-wrapper {
+    
+    .mobile-nav .nav-left, .mobile-nav .nav-right {
+        justify-content: center !important;
         width: 100% !important;
     }
 
-    /* 3. Make the Inventory Item Rows Neater */
-    .mobile-item {
+    .mobile-toolbar {
+        flex-wrap: wrap !important;
+    }
+    
+    .mobile-toolbar > * {
+        flex: 1 1 auto !important;
+    }
+    
+    /* Make the search input take full width if needed */
+    #search-input {
+        width: 100% !important;
+        box-sizing: border-box !important;
+    }
+
+    /* Keep entry items readable */
+    .entry-item {
         flex-direction: column !important;
         align-items: flex-start !important;
     }
-    .mobile-item > div:last-child {
+    
+    .entry-item > div:last-child {
         text-align: left !important;
-        width: 100% !important;
-        opacity: 0.6 !important;
+        margin-top: 5px !important;
     }
 
-    /* 4. Ensure form inputs & drawers stack on small screens */
-    .mobile-flex {
-        flex-direction: column !important;
-    }
-    .mobile-flex > div, .mobile-flex > button {
-        width: 100% !important;
-        flex: none !important;
-    }
-
-    /* 5. Modals - ensure they fit tightly */
+    /* Modals - ensure they fit tightly */
     .cs-dialog {
         width: 95% !important;
-        max-width: 400px !important;
-        margin: 0 auto !important;
+        max-width: none !important;
+        margin: auto !important;
     }
 
-    /* 6. Action Bars (Cancel/Save) */
+    /* Stack form groups inside modals */
+    .mobile-flex {
+        flex-direction: column !important;
+        gap: 10px !important;
+    }
+    
     .mobile-action-bar {
         flex-direction: column !important;
         align-items: stretch !important;
-        gap: 15px !important;
     }
+    
     .mobile-action-bar > div {
-        width: 100% !important;
+        justify-content: stretch !important;
         display: flex !important;
+        width: 100% !important;
     }
+    
     .mobile-action-bar button {
-        flex-grow: 1 !important;
+        flex: 1 !important;
     }
 }
