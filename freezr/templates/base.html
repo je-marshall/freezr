@@ -2,19 +2,62 @@
 <title>{% block title %}{% endblock %} - Freezr</title>
 <script type="module" src="{{ url_for('static', filename='cs16.js') }}"></script>
 <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-<nav style="margin: 30px; text-align: center;">
-    <h1><a style="text-align: center;" class="cs-btn" href="{{ url_for('index') }}">FREEZR</a></h1>
+
+<nav style="width: 90%; margin: 30px auto; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;">
+    
+    <div style="display: flex; align-items: center; gap: 15px;">
+        <a class="cs-btn" href="{{ url_for('index') }}" style="font-weight: bold; text-decoration: none; padding: 10px 20px;">FREEZR</a>
+        <span style="font-weight: bold; font-size: 1.2rem; letter-spacing: 1px;">FREEZER INVENTORY MANAGEMENT SYSTEM</span>
+    </div>
+    
+    <div style="display: flex; gap: 10px;">
         {% if g.user %}
-           <a disabled class="cs-btn">{{ g.user['username'] }}</a>
-           <a class="cs-btn" href="{{ url_for('auth.logout') }}">Log Out</a>
+            <button class="cs-btn" style="display: flex; align-items: center; gap: 8px; font-weight: bold; text-decoration: none; padding: 10px 20px 10px 12px; cursor: pointer;" onclick="document.getElementById('user-modal').showModal()">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-user"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                <span>{{ g.user['username'] }}</span>
+            </button>
+        {% else %}
+            <a class="cs-btn" style="font-weight: bold; text-decoration: none; padding: 10px 20px;" href="{{ url_for('auth.login') }}">Log In</a>
         {% endif %}
+    </div>
 </nav>
-<section style="margin: 30px; text-align: center" class="content">
-    <header style="text-align: center">
+
+<section class="content" style="width: 90%; margin: 0 auto; text-align: center;">
+    <header>
         {% block header %}{% endblock %}
     </header>
-    {% for message in get_flashed_messages() %}
-        <div class="flash">{{ message }}</div>
+
+    {% for category, message in get_flashed_messages(with_categories=true) %}
+        {% if category == 'success' %}
+            <div class="flash success" style="margin-bottom: 20px; padding: 10px; background-color: #4CAF50; color: white; border: 2px solid #388E3C; font-weight: bold; display: inline-block;">
+                {{ message }}
+            </div>
+        {% else %}
+            <div class="flash" style="margin-bottom: 20px; padding: 10px; background-color: #f44336; color: white; border: 2px solid #d32f2f; font-weight: bold; display: inline-block;">
+                {{ message }}
+            </div>
+        {% endif %}
     {% endfor %}
+    
     {% block content %}{% endblock %}
 </section>
+
+{% if g.user %}
+<dialog id="user-modal" class="cs-dialog">
+    <div class="heading">
+        <div class="wrapper">
+            <div class="icon"></div>
+            <p class="text">User Menu</p>
+        </div>
+        <button class="cs-btn close" onclick="document.getElementById('user-modal').close()"></button>
+    </div>
+    <div class="content" style="text-align: center; padding: 20px;">
+        <p style="margin-bottom: 20px; font-size: 1.1rem;">Logged in as <strong>{{ g.user['username'] }}</strong></p>
+        
+        <div style="display: flex; flex-direction: column; gap: 10px; align-items: center;">
+            <a class="cs-btn" style="text-decoration: none; width: 90%; text-align: center; font-weight: bold; padding: 10px;" href="{{ url_for('categories.index') }}">Manage</a>
+            <a class="cs-btn danger" style="text-decoration: none; width: 90%; text-align: center; font-weight: bold; padding: 10px; color: #ff6b6b;" href="{{ url_for('auth.logout') }}">Log Out</a>
+        </div>
+    </div>
+</dialog>
+{% endif %}

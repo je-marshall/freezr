@@ -1,33 +1,33 @@
 import functools
 from flask import (
-    Blueprint, flash, g, redirect, render_template, request, session, url_for
+    Blueprint, flash, g, redirect, request, url_for
 )
 from freezr.db import get_db
+from freezr.auth import login_required
 
 bp = Blueprint('move', __name__, url_prefix='/move')
 
-@bp.route('/about', methods=('GET', 'POST'))
-def about():
-    if request.method == 'POST':
-        category = request.form['category']
-        subcat = request.form['subcat']
-        subsub = request.form['subsub']
-        db = get_db()
-        error = None
-        if not category:
-            error = 'Category is required.'
-        elif not subcat:
-            error = 'Sub category is required.'
-        elif not subsub:
-            error = 'Sub sub category is required.'
-        if error is None:
-            try:
-                db.execute(
-                    'INSERT INTO entries(category, subcat, subsub) VALUES (?, ?, ?)',
-                    (category, subcat, subsub),
-                )
-                db.commit()
-            except db.IntegrityError:
-                error = 'Entry already registered.'
-        flash(error)
-    return render_template('move/about.html')
+@bp.route('/do', methods=['POST'])
+@login_required
+def move():
+    entry_id = request.form.get('entry_id')
+    freezer_id = request.form.get('freezer')
+    drawer = request.form.get('drawer')
+    
+    db = get_db()
+    error = None
+    
+    if not entry_id or not freezer_id or not drawer:
+        error = 'You must select an item, a freezer, and a drawer.'
+        
+    if error is None:
+        # Update the specific item making sure it belongs to the logged in user
+        db.execute(
+            'UPDATE entries SET freezer_id = ?, drawer = ? WHERE id = ? AND auth_id = ?',
+            (freezer_id, drawer, entry_id, g.user['id'])
+        )
+        db.commit()
+        return redirect(url_for('index.index'))
+        
+    flash(error)
+    return redirect(url_for('index.index'))

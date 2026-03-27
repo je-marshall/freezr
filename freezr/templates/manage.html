@@ -1,0 +1,373 @@
+{% extends 'base.html' %}
+
+{% block title %}Manage Inventory{% endblock %}
+
+{% block header %}
+  <h1 style="text-align: left; padding-bottom: 20px;">Manage Freezers & Categories</h1>
+{% endblock %}
+
+{% block content %}
+<style>
+    /* --- The Master Tree Logic --- */
+    .tree-list { list-style: none; padding: 0; margin: 0; }
+    .tree-item { border-bottom: 1px solid var(--border-dark); padding: 8px 0; }
+    .tree-branch { list-style: none; padding-left: 32px; margin: 0; position: relative; }
+    .tree-branch li { position: relative; list-style: none; margin: 0; padding: 8px 0 0 12px; }
+    
+    /* Lines */
+    .tree-branch li::before { content: ""; position: absolute; left: -16px; top: -10px; bottom: 0; border-left: 2px solid #999; }
+    .tree-branch li::after { content: ""; position: absolute; left: -16px; top: 22px; width: 18px; border-top: 2px solid #999; }
+    .tree-branch li:last-child::before { height: 32px; bottom: auto; }
+
+    /* Toggle Buttons & Nodes */
+    details summary { display: flex; align-items: center; cursor: pointer; list-style: none; outline: none; }
+    details summary::-webkit-details-marker { display: none; }
+
+    .toggle-icon {
+        display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px;
+        background: #2a2a2a; border: 1px solid #999; border-radius: 4px; margin-right: 10px;
+        font-family: monospace; font-weight: bold; color: #fff; flex-shrink: 0; font-size: 16px;
+        z-index: 2; box-shadow: 2px 2px 4px rgba(0,0,0,0.4);
+    }
+    .leaf-node {
+        width: 8px; height: 8px; background: #999; border-radius: 50%;
+        margin-left: 7px; margin-right: 17px; flex-shrink: 0; z-index: 2;
+    }
+
+    details[open] > summary .toggle-icon::before { content: "−"; }
+    details:not([open]) > summary .toggle-icon::before { content: "+"; }
+    
+    .tree-label { flex-grow: 1; font-size: 1rem; display: flex; align-items: center; color: var(--text-main); }
+    .tree-btn { padding: 4px 8px !important; font-size: 0.8em !important; min-width: 50px; }
+</style>
+
+<div style="width: 100%; margin: 0 auto; text-align: left;">
+    
+    <div class="cs-tabs">
+        
+        <input class="radiotab" name="tabs" tabindex="1" type="radio" id="tab-freezers" checked="checked" />
+        <label class="label" for="tab-freezers">Freezers</label>
+        <div class="panel" tabindex="1">
+            <div style="padding: 10px;">
+                <ul class="tree-list">
+                    {% for freezer in freezers %}
+                    <li class="tree-item" style="display: flex; justify-content: space-between; align-items: center;">
+                        <span><strong>{{ freezer['name'] }}</strong> ({{ freezer['drawers'] }} Drawers) <br> <em>Location: {{ freezer['location'] }}</em></span>
+                        <button class="cs-btn" data-id="{{ freezer['id'] }}" data-name="{{ freezer['name'] }}" data-drawers="{{ freezer['drawers'] }}" data-location="{{ freezer['location'] }}" onclick="openFreezerEdit(this)">Edit</button>
+                    </li>
+                    {% else %}
+                    <p style="padding: 10px 0;">No freezers found.</p>
+                    {% endfor %}
+                </ul>
+                <button class="cs-btn" style="margin-top: 15px; width: 100%; font-weight: bold;" onclick="document.getElementById('add-freezer-modal').showModal()">+ Add New Freezer</button>
+            </div>
+        </div>
+
+        <input class="radiotab" tabindex="1" name="tabs" type="radio" id="tab-categories" />
+        <label class="label" for="tab-categories">Categories</label>
+        <div class="panel" tabindex="1">
+            <div style="padding: 10px;">
+                <ul class="tree-list">
+                    {% for cat in categories %}
+                    <li class="tree-item">
+                        <details id="details-cat-{{ cat['id'] }}" class="persist-tree">
+                            <summary>
+                                <div class="toggle-icon"></div>
+                                <div class="tree-label"><strong>{{ cat['category'] }}</strong></div>
+                                <div style="display: flex; gap: 5px;">
+                                    <button class="cs-btn tree-btn" onclick="event.preventDefault(); openAddSubcat('{{ cat['id'] }}')">+ Sub</button>
+                                    <button class="cs-btn tree-btn" data-id="{{ cat['id'] }}" data-name="{{ cat['category'] }}" onclick="event.preventDefault(); openCategoryEdit(this)">Edit</button>
+                                </div>
+                            </summary>
+                            
+                            <ul class="tree-branch">
+                                {% for sub in cat['subcats'] %}
+                                <li>
+                                    <details id="details-sub-{{ sub['id'] }}" class="persist-tree">
+                                        <summary>
+                                            <div class="toggle-icon"></div>
+                                            <div class="tree-label">{{ sub['subcat'] }}</div>
+                                            <div style="display: flex; gap: 5px;">
+                                                <button class="cs-btn tree-btn" onclick="event.preventDefault(); openAddSubsub('{{ sub['id'] }}')">+ Type</button>
+                                                <button class="cs-btn tree-btn" data-id="{{ sub['id'] }}" data-name="{{ sub['subcat'] }}" onclick="event.preventDefault(); openEditSubcat(this)">Edit</button>
+                                            </div>
+                                        </summary>
+                                        <ul class="tree-branch">
+                                            {% for ss in sub['subsubs'] %}
+                                            <li style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 8px;">
+                                                <div class="tree-label" style="font-style: italic; color: #aaa;"><div class="leaf-node"></div>{{ ss['subsub'] }}</div>
+                                                <button class="cs-btn tree-btn" data-id="{{ ss['id'] }}" data-name="{{ ss['subsub'] }}" onclick="openEditSubsub(this)">Edit</button>
+                                            </li>
+                                            {% else %}
+                                            <li><div class="tree-label" style="color: gray; font-size: 0.8em; font-style: italic;"><div class="leaf-node"></div>No types listed.</div></li>
+                                            {% endfor %}
+                                        </ul>
+                                    </details>
+                                </li>
+                                {% else %}
+                                <li><div class="tree-label" style="color: gray; font-size: 0.8em; font-style: italic;"><div class="leaf-node"></div>No sub-categories yet.</div></li>
+                                {% endfor %}
+                            </ul>
+                        </details>
+                    </li>
+                    {% else %}
+                    <p style="padding: 10px 0;">No categories found.</p>
+                    {% endfor %}
+                </ul>
+                <button class="cs-btn" style="margin-top: 15px; width: 100%; font-weight: bold;" onclick="document.getElementById('add-category-modal').showModal()">+ Add New Main Category</button>
+            </div>
+        </div>
+
+        {% if g.user and g.user['username'] == 'admin' %}
+        <input class="radiotab" tabindex="1" name="tabs" type="radio" id="tab-users" />
+        <label class="label" for="tab-users">Users</label>
+        <div class="panel" tabindex="1">
+            <div style="padding: 10px;">
+                <p style="font-size: 0.9em; color: #aaa; margin-bottom: 15px;">Create accounts for family members. Only the admin can see this tab.</p>
+                <ul class="tree-list">
+                    {% for u in all_users %}
+                    <li class="tree-item" style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 1.1rem; color: var(--text-main);">
+                            <strong>{{ u['username'] }}</strong> 
+                            {% if u['id'] == 1 %}<span style="color: #666; font-size: 0.8em;">(Admin Account)</span>{% endif %}
+                        </span>
+                        {% if u['id'] != 1 %}
+                        <form method="POST" action="{{ url_for('auth.admin_delete_user', id=u['id']) }}" style="margin: 0;" onsubmit="return confirm('WARNING: Are you sure you want to delete user \'{{ u['username'] }}\'? All their items and freezers will be lost forever!');">
+                            <button type="submit" class="cs-btn danger tree-btn">Delete</button>
+                        </form>
+                        {% endif %}
+                    </li>
+                    {% else %}
+                    <p style="padding: 10px 0;">No additional users found.</p>
+                    {% endfor %}
+                </ul>
+                <button class="cs-btn" style="margin-top: 15px; width: 100%; font-weight: bold;" onclick="document.getElementById('add-user-modal').showModal()">+ Add New User</button>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+</div>
+
+{% if g.user and g.user['username'] == 'admin' %}
+<dialog id="add-user-modal" class="cs-dialog">
+    <div class="heading">
+        <div class="wrapper"><div class="icon"></div><p class="text" style="font-weight: bold;">Create New User</p></div>
+        <button class="cs-btn close" type="button" onclick="document.getElementById('add-user-modal').close()"></button>
+    </div>
+    <div class="content" style="padding: 20px;">
+        <form method="POST" action="{{ url_for('auth.admin_add_user') }}" style="display: flex; flex-direction: column; gap: 15px;">
+            <div><label style="font-weight: bold; margin-bottom: 5px; display: block;">Username:</label>
+                <input type="text" name="username" required class="cs-input" style="width: 100%;" placeholder="e.g. janesmith">
+            </div>
+            <div><label style="font-weight: bold; margin-bottom: 5px; display: block;">Password:</label>
+                <input type="text" name="password" required class="cs-input" style="width: 100%;" placeholder="Give this to the user">
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
+                <button type="button" class="cs-btn" onclick="document.getElementById('add-user-modal').close()">Cancel</button>
+                <button type="submit" class="cs-btn">Create User</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+{% endif %}
+
+<dialog id="add-freezer-modal" class="cs-dialog">
+    <div class="heading">
+        <div class="wrapper"><div class="icon"></div><p class="text" style="font-weight: bold;">Add New Freezer</p></div>
+        <button class="cs-btn close" type="button" onclick="document.getElementById('add-freezer-modal').close()"></button>
+    </div>
+    <div class="content" style="padding: 20px;">
+        <form method="POST" action="{{ url_for('freezers.add') }}" style="display: flex; flex-direction: column; gap: 15px;">
+            <div><label>Freezer Name:</label><input type="text" name="name" required class="cs-input" style="width: 100%;"></div>
+            <div><label>Drawers:</label><input type="number" name="drawers" required class="cs-input" style="width: 100%;" min="1" value="4"></div>
+            <div><label>Location:</label><input type="text" name="location" class="cs-input" style="width: 100%;"></div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" class="cs-btn" onclick="document.getElementById('add-freezer-modal').close()">Cancel</button>
+                <button type="submit" class="cs-btn">Save</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+
+<dialog id="edit-freezer-modal" class="cs-dialog">
+    <div class="heading">
+        <div class="wrapper"><div class="icon"></div><p class="text" style="font-weight: bold;">Edit Freezer</p></div>
+        <button class="cs-btn close" type="button" onclick="document.getElementById('edit-freezer-modal').close()"></button>
+    </div>
+    <div class="content" style="padding: 20px;">
+        <form id="edit-freezer-form" method="POST" action="" style="display: flex; flex-direction: column; gap: 15px;">
+            <input type="text" id="edit-freezer-name" name="name" required class="cs-input" style="width: 100%;">
+            <input type="number" id="edit-freezer-drawers" name="drawers" required class="cs-input" style="width: 100%;">
+            <input type="text" id="edit-freezer-location" name="location" class="cs-input" style="width: 100%;">
+            <div style="display: flex; justify-content: space-between;">
+                <button type="submit" name="action" value="delete" class="cs-btn danger" onclick="return confirm('Delete this freezer?');">Delete</button>
+                <button type="submit" name="action" value="save" class="cs-btn">Save</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+
+<dialog id="add-category-modal" class="cs-dialog">
+    <div class="heading">
+        <div class="wrapper"><div class="icon"></div><p class="text" style="font-weight: bold;">Add Main Category</p></div>
+        <button class="cs-btn close" type="button" onclick="document.getElementById('add-category-modal').close()"></button>
+    </div>
+    <div class="content" style="padding: 20px;">
+        <form method="POST" action="{{ url_for('categories.add') }}" style="display: flex; flex-direction: column; gap: 15px;">
+            <input type="text" name="category_name" required class="cs-input" placeholder="e.g. Meat">
+            <button type="submit" class="cs-btn">Save Category</button>
+        </form>
+    </div>
+</dialog>
+
+<dialog id="edit-category-modal" class="cs-dialog">
+    <div class="heading">
+        <div class="wrapper"><div class="icon"></div><p class="text" style="font-weight: bold;">Edit Category</p></div>
+        <button class="cs-btn close" type="button" onclick="document.getElementById('edit-category-modal').close()"></button>
+    </div>
+    <div class="content" style="padding: 20px;">
+        <form id="edit-category-form" method="POST" action="">
+            <input type="text" id="edit-category-name" name="category_name" required class="cs-input" style="width: 100%; margin-bottom: 15px;">
+            <div style="display: flex; justify-content: space-between;">
+                <button type="submit" name="action" value="delete" class="cs-btn danger" onclick="return confirm('Delete this category?');">Delete</button>
+                <button type="submit" name="action" value="save" class="cs-btn">Save</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+
+<dialog id="add-subcat-modal" class="cs-dialog">
+    <div class="heading">
+        <div class="wrapper"><div class="icon"></div><p class="text">Add Sub-Category</p></div>
+        <button class="cs-btn close" type="button" onclick="document.getElementById('add-subcat-modal').close()"></button>
+    </div>
+    <div class="content" style="padding: 20px;">
+        <form id="add-subcat-form" method="POST" action="">
+            <input type="text" name="subcat_name" required class="cs-input" style="width: 100%; margin-bottom: 15px;" placeholder="e.g. Chicken">
+            <button type="submit" class="cs-btn" style="width: 100%;">Add</button>
+        </form>
+    </div>
+</dialog>
+
+<dialog id="edit-subcat-modal" class="cs-dialog">
+    <div class="heading">
+        <div class="wrapper"><div class="icon"></div><p class="text">Edit Sub-Category</p></div>
+        <button class="cs-btn close" type="button" onclick="document.getElementById('edit-subcat-modal').close()"></button>
+    </div>
+    <div class="content" style="padding: 20px;">
+        <form id="edit-subcat-form" method="POST" action="">
+            <input type="text" id="edit-subcat-name" name="subcat_name" required class="cs-input" style="width: 100%; margin-bottom: 15px;">
+            <div style="display: flex; justify-content: space-between;">
+                <button type="submit" name="action" value="delete" class="cs-btn danger">Delete</button>
+                <button type="submit" name="action" value="save" class="cs-btn">Save</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+
+<dialog id="add-subsub-modal" class="cs-dialog">
+    <div class="heading">
+        <div class="wrapper"><div class="icon"></div><p class="text">Add Type</p></div>
+        <button class="cs-btn close" type="button" onclick="document.getElementById('add-subsub-modal').close()"></button>
+    </div>
+    <div class="content" style="padding: 20px;">
+        <form id="add-subsub-form" method="POST" action="">
+            <input type="text" name="subsub_name" required class="cs-input" style="width: 100%; margin-bottom: 15px;" placeholder="e.g. Breast">
+            <button type="submit" class="cs-btn" style="width: 100%;">Add Type</button>
+        </form>
+    </div>
+</dialog>
+
+<dialog id="edit-subsub-modal" class="cs-dialog">
+    <div class="heading">
+        <div class="wrapper"><div class="icon"></div><p class="text">Edit Type</p></div>
+        <button class="cs-btn close" type="button" onclick="document.getElementById('edit-subsub-modal').close()"></button>
+    </div>
+    <div class="content" style="padding: 20px;">
+        <form id="edit-subsub-form" method="POST" action="">
+            <input type="text" id="edit-subsub-name" name="subsub_name" required class="cs-input" style="width: 100%; margin-bottom: 15px;">
+            <div style="display: flex; justify-content: space-between;">
+                <button type="submit" name="action" value="delete" class="cs-btn danger">Delete</button>
+                <button type="submit" name="action" value="save" class="cs-btn">Save</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- 1. Tab Persistence ---
+        const activeTabId = localStorage.getItem('manageActiveTab');
+        if (activeTabId) {
+            const activeTab = document.getElementById(activeTabId);
+            if (activeTab) activeTab.checked = true;
+        }
+        document.querySelectorAll('.radiotab').forEach(tab => {
+            tab.addEventListener('change', (e) => {
+                if(e.target.checked) localStorage.setItem('manageActiveTab', e.target.id);
+            });
+        });
+
+        // --- 2. Tree Expansion Persistence ---
+        const treeState = JSON.parse(localStorage.getItem('manageTreeState') || '{}');
+        document.querySelectorAll('.persist-tree').forEach(el => {
+            if (treeState[el.id]) {
+                el.open = true;
+            }
+            el.addEventListener('toggle', () => {
+                const currentState = JSON.parse(localStorage.getItem('manageTreeState') || '{}');
+                currentState[el.id] = el.open;
+                localStorage.setItem('manageTreeState', JSON.stringify(currentState));
+            });
+        });
+    });
+
+    // --- Modal Functions ---
+    function openFreezerEdit(buttonEl) {
+        const id = buttonEl.getAttribute('data-id');
+        document.getElementById('edit-freezer-name').value = buttonEl.getAttribute('data-name');
+        document.getElementById('edit-freezer-drawers').value = buttonEl.getAttribute('data-drawers');
+        document.getElementById('edit-freezer-location').value = buttonEl.getAttribute('data-location');
+        const baseUrl = "{{ url_for('freezers.edit', id=0) }}";
+        document.getElementById('edit-freezer-form').action = baseUrl.replace('/0', '/' + id);
+        document.getElementById('edit-freezer-modal').showModal();
+    }
+
+    function openCategoryEdit(buttonEl) {
+        const id = buttonEl.getAttribute('data-id');
+        document.getElementById('edit-category-name').value = buttonEl.getAttribute('data-name');
+        const baseUrl = "{{ url_for('categories.edit', id=0) }}";
+        document.getElementById('edit-category-form').action = baseUrl.replace('/0', '/' + id);
+        document.getElementById('edit-category-modal').showModal();
+    }
+
+    function openAddSubcat(catId) {
+        const baseUrl = "{{ url_for('categories.add_subcat', cat_id=0) }}";
+        document.getElementById('add-subcat-form').action = baseUrl.replace('/0', '/' + catId);
+        document.getElementById('add-subcat-modal').showModal();
+    }
+
+    function openEditSubcat(buttonEl) {
+        const id = buttonEl.getAttribute('data-id');
+        document.getElementById('edit-subcat-name').value = buttonEl.getAttribute('data-name');
+        const baseUrl = "{{ url_for('categories.edit_subcat', id=0) }}";
+        document.getElementById('edit-subcat-form').action = baseUrl.replace('/0', '/' + id);
+        document.getElementById('edit-subcat-modal').showModal();
+    }
+
+    function openAddSubsub(subcatId) {
+        const baseUrl = "{{ url_for('categories.add_subsub', subcat_id=0) }}";
+        document.getElementById('add-subsub-form').action = baseUrl.replace('/0', '/' + subcatId);
+        document.getElementById('add-subsub-modal').showModal();
+    }
+
+    function openEditSubsub(buttonEl) {
+        const id = buttonEl.getAttribute('data-id');
+        document.getElementById('edit-subsub-name').value = buttonEl.getAttribute('data-name');
+        const baseUrl = "{{ url_for('categories.edit_subsub', id=0) }}";
+        document.getElementById('edit-subsub-form').action = baseUrl.replace('/0', '/' + id);
+        document.getElementById('edit-subsub-modal').showModal();
+    }
+</script>
+{% endblock %}
