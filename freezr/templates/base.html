@@ -17,7 +17,6 @@
                 <span>{{ g.user['username'] }}</span>
             </button>
         {% else %}
-            <a class="cs-btn" style="font-weight: bold; text-decoration: none; padding: 10px 20px;" href="{{ url_for('auth.register') }}">Register</a>
             <a class="cs-btn" style="font-weight: bold; text-decoration: none; padding: 10px 20px;" href="{{ url_for('auth.login') }}">Log In</a>
         {% endif %}
     </div>

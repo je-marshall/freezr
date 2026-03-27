@@ -103,32 +103,45 @@ document.addEventListener('DOMContentLoaded', function() {
     if (checkinForm) {
         checkinForm.addEventListener('submit', async function(e) {
             e.preventDefault();
+            
+            // Build the description for the label BEFORE we submit
+            let itemDescription = 'Freezer Item';
+            if (subsubSelect && subsubSelect.value) {
+                itemDescription = subsubSelect.options[subsubSelect.selectedIndex].text;
+            } else if (subcatSelect && subcatSelect.value) {
+                itemDescription = subcatSelect.options[subcatSelect.selectedIndex].text;
+            }
+
             const formData = new FormData(checkinForm);
             
             try {
                 const response = await fetch(checkinForm.action, {
                     method: 'POST',
-                    body: formData
+                    body: formData,
+                    headers: { 'Accept': 'application/json' }
                 });
+                
                 const result = await response.json();
 
                 if (result.success) {
-                    // Check if print was requested
-                    if (formData.get('print_label')) {
-                        // Use the trigger function from inventory.js
-                        if (typeof window.triggerPrint === "function") {
-                            window.triggerPrint(result.entry_id, result.description);
-                        }
+                    if (formData.get('print_label') && typeof window.triggerPrint === "function") {
+                        // Trigger the print dialog
+                        window.triggerPrint(result.entry_id, itemDescription);
+                        
+                        // Wait for the print dialog to open/close before reloading
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 1000);
+                    } else {
+                        // No print requested, reload instantly
+                        window.location.reload();
                     }
-                    // Reload to show the new item in the list
-                    window.location.reload();
                 } else {
                     alert('Error saving item: ' + (result.message || 'Unknown error'));
                 }
             } catch (err) {
                 console.error('Submission failed:', err);
-                // Fallback: if JSON fails, just submit normally
-                checkinForm.submit();
+                alert('A server error occurred while saving.');
             }
         });
     }

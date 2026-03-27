@@ -8,45 +8,13 @@ from freezr.helpers import seed_default_categories
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
 
-@bp.route('/register', methods=('GET', 'POST'))
-def register():
-    if request.method == 'POST':
-        username = request.form['username']
-        password = request.form['password']
-        db = get_db()
-        error = None
-
-        if not username:
-            error = 'Username is required.'
-        elif not password:
-            error = 'Password is required.'
-
-        if error is None:
-            try:
-                # 1. Create the new user
-                cursor = db.execute(
-                    "INSERT INTO user (username, password) VALUES (?, ?)",
-                    (username, generate_password_hash(password)),
-                )
-                user_id = cursor.lastrowid
-                
-                # 2. Seed default "Kitchen Freezer"
-                db.execute(
-                    "INSERT INTO freezers (name, drawers, location, auth_id) VALUES (?, ?, ?, ?)",
-                    ('Kitchen Freezer', 4, 'Kitchen', user_id)
-                )
-
-                # 3. Seed default user-specific categories from JSON file
-                seed_default_categories(user_id)
-                
-            except db.IntegrityError:
-                error = f"User {username} is already registered."
-            else:
-                return redirect(url_for("auth.login"))
-
-        flash(error)
-
-    return render_template('auth/register.html')
+# --- Inject users to templates globally so you don't have to edit other Python files! ---
+@bp.app_context_processor
+def inject_all_users():
+    if g.get('user') and g.user['username'] == 'admin':
+        users = get_db().execute('SELECT id, username FROM user').fetchall()
+        return dict(all_users=users)
+    return dict(all_users=[])
 
 @bp.route('/login', methods=('GET', 'POST'))
 def login():
@@ -67,7 +35,7 @@ def login():
         if error is None:
             session.clear()
             session['user_id'] = user['id']
-            return redirect(url_for('index'))
+            return redirect(url_for('index.index'))  # Assuming endpoint is index.index
 
         flash(error)
 
@@ -87,14 +55,75 @@ def load_logged_in_user():
 @bp.route('/logout')
 def logout():
     session.clear()
-    return redirect(url_for('index'))
+    return redirect(url_for('auth.login'))
 
 def login_required(view):
     @functools.wraps(view)
     def wrapped_view(**kwargs):
         if g.user is None:
             return redirect(url_for('auth.login'))
-
         return view(**kwargs)
-
     return wrapped_view
+
+# ==========================================
+# ADMIN ROUTES (User Management)
+# ==========================================
+
+@bp.route('/admin/add_user', methods=('POST',))
+@login_required
+def admin_add_user():
+    if g.user['username'] != 'admin':
+        flash('Access denied. Admin only.')
+        return redirect(request.referrer or url_for('index.index'))
+        
+    username = request.form['username']
+    password = request.form['password']
+    db = get_db()
+    error = None
+
+    if not username or not password:
+        error = 'Username and Password are required.'
+
+    if error is None:
+        try:
+            # Create user
+            cursor = db.execute(
+                "INSERT INTO user (username, password) VALUES (?, ?)",
+                (username, generate_password_hash(password)),
+            )
+            new_user_id = cursor.lastrowid
+            
+            # Seed default Kitchen Freezer and Categories
+            db.execute(
+                "INSERT INTO freezers (name, drawers, location, auth_id) VALUES (?, ?, ?, ?)",
+                ('Kitchen Freezer', 4, 'Kitchen', new_user_id)
+            )
+            seed_default_categories(new_user_id)
+            db.commit()
+            
+            flash(f"User '{username}' created successfully!")
+        except db.IntegrityError:
+            flash(f"User '{username}' already exists.")
+    else:
+        flash(error)
+
+    return redirect(request.referrer)
+
+@bp.route('/admin/delete_user/<int:id>', methods=('POST',))
+@login_required
+def admin_delete_user(id):
+    if g.user['username'] != 'admin':
+        flash('Access denied. Admin only.')
+        return redirect(request.referrer or url_for('index.index'))
+        
+    if id == 1:
+        flash('Cannot delete the primary admin account.')
+        return redirect(request.referrer)
+
+    db = get_db()
+    # Note: SQLite should cascade delete their freezers/items if foreign keys are set up, 
+    # but we delete the user safely here regardless.
+    db.execute('DELETE FROM user WHERE id = ?', (id,))
+    db.commit()
+    flash('User account completely removed.')
+    return redirect(request.referrer)
