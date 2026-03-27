@@ -160,10 +160,10 @@
             <div><label style="font-weight: bold; margin-bottom: 5px; display: block;">Username:</label>
                 <input type="text" name="username" required class="cs-input" style="width: 100%;" placeholder="e.g. janesmith">
             </div>
-            <div><label style="font-weight: bold; margin-bottom: 5px; display: block;">Temporary Password:</label>
+            <div><label style="font-weight: bold; margin-bottom: 5px; display: block;">Password:</label>
                 <input type="text" name="password" required class="cs-input" style="width: 100%;" placeholder="Give this to the user">
             </div>
-            <div id="mobile-action-bar-3" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
                 <button type="button" class="cs-btn" onclick="document.getElementById('add-user-modal').close()">Cancel</button>
                 <button type="submit" class="cs-btn">Create User</button>
             </div>
@@ -182,7 +182,7 @@
             <div><label>Freezer Name:</label><input type="text" name="name" required class="cs-input" style="width: 100%;"></div>
             <div><label>Drawers:</label><input type="number" name="drawers" required class="cs-input" style="width: 100%;" min="1" value="4"></div>
             <div><label>Location:</label><input type="text" name="location" class="cs-input" style="width: 100%;"></div>
-            <div id="mobile-action-bar-4" style="display: flex; justify-content: flex-end; gap: 10px;">
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
                 <button type="button" class="cs-btn" onclick="document.getElementById('add-freezer-modal').close()">Cancel</button>
                 <button type="submit" class="cs-btn">Save</button>
             </div>
@@ -200,7 +200,7 @@
             <input type="text" id="edit-freezer-name" name="name" required class="cs-input" style="width: 100%;">
             <input type="number" id="edit-freezer-drawers" name="drawers" required class="cs-input" style="width: 100%;">
             <input type="text" id="edit-freezer-location" name="location" class="cs-input" style="width: 100%;">
-            <div id="mobile-flex-row-5" style="display: flex; justify-content: space-between; gap: 10px;">
+            <div style="display: flex; justify-content: space-between;">
                 <button type="submit" name="action" value="delete" class="cs-btn danger" onclick="return confirm('Delete this freezer?');">Delete</button>
                 <button type="submit" name="action" value="save" class="cs-btn">Save</button>
             </div>
@@ -229,7 +229,7 @@
     <div class="content" style="padding: 20px;">
         <form id="edit-category-form" method="POST" action="">
             <input type="text" id="edit-category-name" name="category_name" required class="cs-input" style="width: 100%; margin-bottom: 15px;">
-            <div id="mobile-flex-row-6" style="display: flex; justify-content: space-between; gap: 10px;">
+            <div style="display: flex; justify-content: space-between;">
                 <button type="submit" name="action" value="delete" class="cs-btn danger" onclick="return confirm('Delete this category?');">Delete</button>
                 <button type="submit" name="action" value="save" class="cs-btn">Save</button>
             </div>
@@ -258,7 +258,7 @@
     <div class="content" style="padding: 20px;">
         <form id="edit-subcat-form" method="POST" action="">
             <input type="text" id="edit-subcat-name" name="subcat_name" required class="cs-input" style="width: 100%; margin-bottom: 15px;">
-            <div id="mobile-flex-row-7" style="display: flex; justify-content: space-between; gap: 10px;">
+            <div style="display: flex; justify-content: space-between;">
                 <button type="submit" name="action" value="delete" class="cs-btn danger">Delete</button>
                 <button type="submit" name="action" value="save" class="cs-btn">Save</button>
             </div>
@@ -287,7 +287,7 @@
     <div class="content" style="padding: 20px;">
         <form id="edit-subsub-form" method="POST" action="">
             <input type="text" id="edit-subsub-name" name="subsub_name" required class="cs-input" style="width: 100%; margin-bottom: 15px;">
-            <div id="mobile-flex-row-8" style="display: flex; justify-content: space-between; gap: 10px;">
+            <div style="display: flex; justify-content: space-between;">
                 <button type="submit" name="action" value="delete" class="cs-btn danger">Delete</button>
                 <button type="submit" name="action" value="save" class="cs-btn">Save</button>
             </div>
