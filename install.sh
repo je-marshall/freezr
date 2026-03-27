@@ -17,50 +17,40 @@ CURRENT_USER=$(whoami)
 echo "[1/5] Installing system prerequisites (requires sudo)..."
 sudo dnf install -y epel-release
 sudo dnf update -y
-# We include gcc and python3-devel as they are often required 
-# to compile certain Python C-extensions via pip on Rocky
-sudo dnf install -y python3 python3-pip python3-devel gcc
+sudo dnf install -y python3 python3-pip python3-devel gcc sqlite sqlite-devel git
 
-# 3. Create and activate virtual environment
+# 3. Create virtual environment
 echo "[2/5] Creating Python virtual environment..."
 python3 -m venv "$VENV_DIR"
-source "$VENV_DIR/bin/activate"
 
-# 4. Install the application and Gunicorn
-echo "[3/5] Installing Freezr and Gunicorn..."
-pip install --upgrade pip
-pip install -e .
-pip install gunicorn
+# 4. Install the application and build tools
+echo "[3/5] Installing Freezr and dependencies..."
+# Use the venv's pip directly to guarantee it installs in the right place
+"$VENV_DIR/bin/pip" install --upgrade pip
+"$VENV_DIR/bin/pip" install wheel setuptools
+"$VENV_DIR/bin/pip" install -e .
 
 # 5. Initialize the Database
 echo "[4/5] Initializing the database..."
 export FLASK_APP=freezr
-# This will trigger your newly created secure admin generation!
-flask init-db 
+# Calling the venv's flask binary directly completely guarantees the venv is used!
+"$VENV_DIR/bin/flask" init-db 
 
 # 6. Create the Systemd Service
-echo "[5/5] Creating systemd service for Gunicorn..."
-SERVICE_FILE="/etc/systemd/system/freezr.service"
+echo "[5/5] Configuring systemd service..."
+LOCAL_SERVICE_FILE="$APP_DIR/freezr.service"
+SYSTEMD_DEST="/etc/systemd/system/freezr.service"
 
-# Note: Rocky Linux doesn't use the 'www-data' group. 
-# We set Group to $CURRENT_USER so Gunicorn has perfect 
-# read/write access to your SQLite database file.
-sudo bash -c "cat > $SERVICE_FILE" <<EOF
-[Unit]
-Description=Gunicorn instance to serve Freezr
-After=network.target
+if [ ! -f "$LOCAL_SERVICE_FILE" ]; then
+    echo "Error: $LOCAL_SERVICE_FILE not found in the current directory!"
+    exit 1
+fi
 
-[Service]
-User=$CURRENT_USER
-Group=$CURRENT_USER
-WorkingDirectory=$APP_DIR
-Environment="PATH=$VENV_DIR/bin"
-# Runs gunicorn with 4 workers, binding to localhost on port 8000
-ExecStart=$VENV_DIR/bin/gunicorn -w 4 -b 127.0.0.1:8000 'freezr:create_app()'
-
-[Install]
-WantedBy=multi-user.target
-EOF
+# Use sed to replace the placeholders in the template and write to systemd
+sudo sed -e "s|__USER__|$CURRENT_USER|g" \
+         -e "s|__APP_DIR__|$APP_DIR|g" \
+         -e "s|__VENV_DIR__|$VENV_DIR|g" \
+         "$LOCAL_SERVICE_FILE" | sudo tee "$SYSTEMD_DEST" > /dev/null
 
 # 7. Enable and start the service
 echo "Starting and enabling the Freezr service..."
