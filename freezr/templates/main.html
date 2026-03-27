@@ -3,7 +3,7 @@
 {% block title %}Inventory{% endblock %}
 
 {% block header %}
-    <div class="mobile-toolbar" style="display: flex; width: 100%; margin: 0 auto; gap: 15px; align-items: stretch; box-sizing: border-box;">
+    <div id="main-toolbar" style="display: flex; width: 100%; margin: 0 auto; gap: 15px; align-items: stretch; box-sizing: border-box;">
         
         <button id="btn-scan-init" class="cs-btn" type="button" style="padding: 10px; display: flex; justify-content: center; align-items: center; cursor: pointer; text-decoration: none;">
             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -106,7 +106,7 @@
                     <label id="lbl-cooked" style="display:none; font-weight: bold;"><input type="checkbox" id="chk-cooked" name="cooked" value="1" class="cs-checkbox"> Cooked</label>
                 </div>
 
-                <div class="mobile-flex" style="display: flex; gap: 10px;">
+                <div id="mobile-flex-row-1" style="display: flex; gap: 10px;">
                     <div style="flex: 2;">
                         <label style="display: block; font-weight: bold; margin-bottom: 5px;">Freezer Location:</label>
                         <select id="freezer" name="freezer" required class="cs-select" style="width: 100%; padding: 5px; font-weight: bold;">
@@ -137,7 +137,7 @@
                     <textarea name="notes" rows="2" class="cs-input" style="width: 100%; padding: 5px;" placeholder="e.g. For Friday's curry..."></textarea>
                 </div>
 
-                <div class="mobile-action-bar" style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                <div id="mobile-action-bar-1" style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
                     <label style="font-weight: bold; cursor: pointer;">
                         <input type="checkbox" name="print_label" value="1" class="cs-checkbox" checked> Print QR
                     </label>
@@ -161,7 +161,7 @@
                 <label style="display: block; font-weight: bold; margin-bottom: 5px;">Notes:</label>
                 <textarea id="view-notes" class="cs-input" disabled rows="2" style="width: 100%; padding: 5px; color: white !important; -webkit-text-fill-color: white; opacity: 1; resize: none;"></textarea>
             </div>
-            <div class="mobile-flex" style="display: flex; justify-content: space-between; gap: 10px; margin-top: 20px;">
+            <div id="mobile-flex-row-2" style="display: flex; justify-content: space-between; gap: 10px; margin-top: 20px;">
                 <button type="button" id="btn-print-init" class="cs-btn" style="flex: 1; font-weight: bold; padding: 10px;">PRINT</button>
                 <button type="button" id="btn-move-init" class="cs-btn" style="flex: 1; font-weight: bold; padding: 10px;">MOVE</button>
                 <button type="button" id="btn-checkout-init" class="cs-btn danger" style="flex: 1; font-weight: bold; padding: 10px;">CHECK OUT</button>
@@ -176,7 +176,7 @@
         </div>
         <div class="content" style="padding: 20px; text-align: center; display: flex; flex-direction: column; gap: 15px;">
             <p style="font-size: 1.1rem;">Are you sure you want to completely remove this item from your freezer?</p>
-            <form method="POST" action="{{ url_for('checkout.checkout') }}" style="display: flex; justify-content: space-between; gap: 10px; margin-top: 20px;" class="mobile-flex">
+            <form method="POST" action="{{ url_for('checkout.checkout') }}" id="mobile-flex-row-3" style="display: flex; justify-content: space-between; gap: 10px; margin-top: 20px;">
                 <input type="hidden" name="entry_id" id="checkout-entry-id" value="">
                 <button type="button" id="btn-cancel-confirm" class="cs-btn" style="flex: 1; font-weight: bold; padding: 10px;">Cancel</button>
                 <button type="submit" class="cs-btn danger" style="flex: 1; font-weight: bold; padding: 10px;">Delete</button>
@@ -192,7 +192,7 @@
         <div class="content" style="padding: 20px; text-align: left;">
             <form method="POST" action="{{ url_for('move.move') }}" style="display: flex; flex-direction: column; gap: 15px;">
                 <input type="hidden" name="entry_id" id="move-entry-id" value="">
-                <div class="mobile-flex" style="display: flex; gap: 10px;">
+                <div id="mobile-flex-row-4" style="display: flex; gap: 10px;">
                     <div style="flex: 2;">
                         <label style="display: block; font-weight: bold; margin-bottom: 5px;">New Freezer:</label>
                         <select id="move-freezer" name="freezer" required class="cs-select" style="width: 100%; padding: 5px; font-weight: bold;">
@@ -209,7 +209,7 @@
                         </select>
                     </div>
                 </div>
-                <div class="mobile-action-bar" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
+                <div id="mobile-action-bar-2" style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
                     <button id="btn-cancel-move" type="button" class="cs-btn" style="font-weight: bold;">Cancel</button>
                     <button type="submit" class="cs-btn" style="font-weight: bold;">Confirm Move</button>
                 </div>

@@ -92,68 +92,66 @@
    (Applies only to screens 768px or smaller)
    ========================================= */
 @media (max-width: 768px) {
-    /* 1. Base layout containers stack vertically rather than side-by-side */
-    .mobile-nav {
+    /* Safe Navigation Stacking */
+    #main-nav {
         flex-direction: column !important;
         gap: 15px !important;
         text-align: center !important;
     }
-    
-    .mobile-nav .nav-left, .mobile-nav .nav-right {
+    #nav-left, #nav-right {
         justify-content: center !important;
-        width: 100% !important;
-    }
-
-    .mobile-toolbar {
         flex-wrap: wrap !important;
     }
-    
-    .mobile-toolbar > * {
+
+    /* Safe Toolbar Wrapping */
+    #main-toolbar {
+        flex-wrap: wrap !important;
+    }
+    #main-toolbar > * {
         flex: 1 1 auto !important;
     }
-    
-    /* Make the search input take full width if needed */
     #search-input {
         width: 100% !important;
-        box-sizing: border-box !important;
+        order: 3 !important;
     }
 
-    /* Keep entry items readable */
+    /* List item wrapping */
     .entry-item {
         flex-direction: column !important;
         align-items: flex-start !important;
+        gap: 10px !important;
     }
-    
     .entry-item > div:last-child {
         text-align: left !important;
-        margin-top: 5px !important;
     }
 
-    /* Modals - ensure they fit tightly */
+    /* Modals - ensure they fit tightly without changing class */
     .cs-dialog {
         width: 95% !important;
         max-width: none !important;
         margin: auto !important;
     }
 
-    /* Stack form groups inside modals */
-    .mobile-flex {
+    /* Stack interior modal forms safely */
+    #mobile-flex-row-1, #mobile-flex-row-2, #mobile-flex-row-3, 
+    #mobile-flex-row-4, #mobile-flex-row-5, #mobile-flex-row-6,
+    #mobile-flex-row-7, #mobile-flex-row-8 {
         flex-direction: column !important;
         gap: 10px !important;
     }
     
-    .mobile-action-bar {
+    #mobile-action-bar-1, #mobile-action-bar-2, 
+    #mobile-action-bar-3, #mobile-action-bar-4 {
         flex-direction: column !important;
         align-items: stretch !important;
     }
-    
-    .mobile-action-bar > div {
-        justify-content: stretch !important;
-        display: flex !important;
+    #mobile-action-bar-1 > div, #mobile-action-bar-2 > div,
+    #mobile-action-bar-3 > div, #mobile-action-bar-4 > div {
         width: 100% !important;
+        display: flex !important;
     }
-    
-    .mobile-action-bar button {
+    #mobile-action-bar-1 button, #mobile-action-bar-2 button,
+    #mobile-action-bar-3 button, #mobile-action-bar-4 button {
         flex: 1 !important;
     }
 }
