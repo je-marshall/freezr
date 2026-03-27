@@ -86,7 +86,6 @@
     }
 }
 
-
 /* =========================================
    MOBILE RESPONSIVE TWEAKS 
    (Applies only to screens 768px or smaller)
@@ -107,24 +106,11 @@
 
     /* 2. Fix the Index Toolbar (Check-in, Search) */
     .mobile-toolbar {
-        flex-wrap: wrap !important;
+        flex-direction: column !important;
+        gap: 15px !important;
     }
-    .mobile-toolbar #search-input {
-        order: 3;
-        width: calc(100% - 60px) !important;
-        flex-grow: 1 !important;
-    }
-    .mobile-toolbar #btn-search {
-        order: 4;
-        width: 50px !important;
-    }
-    .mobile-toolbar #btn-checkin {
-        order: 2;
-        flex-grow: 1 !important;
-    }
-    .mobile-toolbar #btn-scan-init {
-        order: 1;
-        width: 50px !important;
+    .mobile-toolbar .search-wrapper {
+        width: 100% !important;
     }
 
     /* 3. Make the Inventory Item Rows Neater */
@@ -154,12 +140,7 @@
         margin: 0 auto !important;
     }
 
-    /* 6. Enlarge all interactive elements to be finger-friendly */
-    .cs-btn, .cs-input, .cs-select, .cs-checkbox {
-        padding: 10px !important;
-    }
-
-    /* 7. Action Bars (Cancel/Save) */
+    /* 6. Action Bars (Cancel/Save) */
     .mobile-action-bar {
         flex-direction: column !important;
         align-items: stretch !important;

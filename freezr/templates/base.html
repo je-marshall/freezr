@@ -7,18 +7,18 @@
 <nav class="mobile-nav" style="width: 90%; margin: 30px auto; display: flex; justify-content: space-between; align-items: center; box-sizing: border-box;">
     
     <div style="display: flex; align-items: center; gap: 15px;">
-        <a class="cs-btn" href="{{ url_for('index') }}" style="font-weight: bold; text-decoration: none; padding: 10px 20px;">FREEZR</a>
+        <a class="cs-btn" href="{{ url_for('index') }}" style="font-weight: bold; text-decoration: none;">FREEZR</a>
         <span class="nav-title" style="font-weight: bold; font-size: 1.2rem; letter-spacing: 1px;">FREEZER INVENTORY MANAGEMENT SYSTEM</span>
     </div>
     
     <div style="display: flex; gap: 10px;">
         {% if g.user %}
-            <button class="cs-btn" style="display: flex; align-items: center; gap: 8px; font-weight: bold; text-decoration: none; padding: 10px 20px 10px 12px; cursor: pointer;" onclick="document.getElementById('user-modal').showModal()">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-user"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
-                <span>{{ g.user['username'] }}</span>
+            <button class="cs-btn" style="font-weight: bold; cursor: pointer;" onclick="document.getElementById('user-modal').showModal()">
+                <svg style="vertical-align: middle; margin-right: 5px;" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                <span style="vertical-align: middle;">{{ g.user['username'] }}</span>
             </button>
         {% else %}
-            <a class="cs-btn" style="font-weight: bold; text-decoration: none; padding: 10px 20px;" href="{{ url_for('auth.login') }}">Log In</a>
+            <a class="cs-btn" style="font-weight: bold; text-decoration: none;" href="{{ url_for('auth.login') }}">Log In</a>
         {% endif %}
     </div>
 </nav>
@@ -56,8 +56,8 @@
         <p style="margin-bottom: 20px; font-size: 1.1rem;">Logged in as <strong>{{ g.user['username'] }}</strong></p>
         
         <div style="display: flex; flex-direction: column; gap: 10px; align-items: center;">
-            <a class="cs-btn" style="text-decoration: none; width: 90%; text-align: center; font-weight: bold; padding: 10px;" href="{{ url_for('categories.index') }}">Manage</a>
-            <a class="cs-btn danger" style="text-decoration: none; width: 90%; text-align: center; font-weight: bold; padding: 10px; color: #ff6b6b;" href="{{ url_for('auth.logout') }}">Log Out</a>
+            <a class="cs-btn" style="text-decoration: none; width: 90%; text-align: center; font-weight: bold;" href="{{ url_for('categories.index') }}">Manage Categories</a>
+            <a class="cs-btn danger" style="text-decoration: none; width: 90%; text-align: center; font-weight: bold; color: #ff6b6b;" href="{{ url_for('auth.logout') }}">Log Out</a>
         </div>
     </div>
 </dialog>
