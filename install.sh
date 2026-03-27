@@ -17,20 +17,22 @@ CURRENT_USER=$(whoami)
 echo "[1/5] Installing system prerequisites (requires sudo)..."
 sudo dnf install -y epel-release
 sudo dnf update -y
-# We include gcc and python3-devel as they are often required 
-# to compile certain Python C-extensions via pip on Rocky
-sudo dnf install -y python3 python3-pip python3-devel gcc
+# We include gcc, python3-devel, sqlite, and git to ensure 
+# pip can build C-extensions and the database works perfectly.
+sudo dnf install -y python3 python3-pip python3-devel gcc sqlite sqlite-devel git
 
 # 3. Create and activate virtual environment
 echo "[2/5] Creating Python virtual environment..."
 python3 -m venv "$VENV_DIR"
 source "$VENV_DIR/bin/activate"
 
-# 4. Install the application and Gunicorn
-echo "[3/5] Installing Freezr and Gunicorn..."
+# 4. Install the application and build tools
+echo "[3/5] Installing Freezr and dependencies..."
 pip install --upgrade pip
+# Ensure build tools are present for processing pyproject.toml
+pip install wheel setuptools
+# Install the app (this will also grab Flask and gunicorn via pyproject.toml)
 pip install -e .
-pip install gunicorn
 
 # 5. Initialize the Database
 echo "[4/5] Initializing the database..."
@@ -42,9 +44,9 @@ flask init-db
 echo "[5/5] Creating systemd service for Gunicorn..."
 SERVICE_FILE="/etc/systemd/system/freezr.service"
 
-# Note: Rocky Linux doesn't use the 'www-data' group. 
+# Note: Rocky Linux doesn't use the 'www-data' group by default. 
 # We set Group to $CURRENT_USER so Gunicorn has perfect 
-# read/write access to your SQLite database file.
+# read/write access to your local SQLite database file.
 sudo bash -c "cat > $SERVICE_FILE" <<EOF
 [Unit]
 Description=Gunicorn instance to serve Freezr
