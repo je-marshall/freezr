@@ -60,6 +60,6 @@ sudo systemctl enable freezr
 
 echo "========================================"
 echo " ✅ Installation Complete! "
-echo " Freezr is now running locally on http://127.0.0.1:8000"
+echo " Freezr is now running locally on http://0.0.0.0:8000"
 echo " Ensure your NGINX reverse proxy points to this address."
 echo "========================================"

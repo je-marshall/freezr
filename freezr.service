@@ -7,8 +7,8 @@ User=__USER__
 Group=__USER__
 WorkingDirectory=__APP_DIR__
 Environment="PATH=__VENV_DIR__/bin"
-# Runs gunicorn with 4 workers, binding to localhost on port 8000
-ExecStart=__VENV_DIR__/bin/gunicorn -w 4 -b 127.0.0.1:8000 'freezr:create_app()'
+# Runs gunicorn with 4 workers, binding to all interfaces on port 8000
+ExecStart=__VENV_DIR__/bin/gunicorn -w 4 -b 0.0.0.0:8000 'freezr:create_app()'
 
 [Install]
 WantedBy=multi-user.target
