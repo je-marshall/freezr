@@ -228,26 +228,65 @@
     </dialog>
 
     <script>
-        // --- NEW BACKEND API PRINT LOGIC ---
+        // --- NEW BACKEND API PRINT LOGIC W/ TOAST UI ---
         window.triggerPrint = async function(id, desc) {
+            // 1. Create and show a "Loading" toast
+            const toast = document.createElement('div');
+            toast.id = 'print-toast';
+            toast.innerText = "⏳ Sending to Printer...";
+            toast.style.position = 'fixed';
+            toast.style.bottom = '20px';
+            toast.style.left = '50%';
+            toast.style.transform = 'translateX(-50%)';
+            toast.style.backgroundColor = '#007bff';
+            toast.style.color = '#fff';
+            toast.style.padding = '12px 24px';
+            toast.style.borderRadius = '8px';
+            toast.style.fontWeight = 'bold';
+            toast.style.zIndex = '9999';
+            toast.style.boxShadow = '0 4px 6px rgba(0,0,0,0.3)';
+            
+            // Remove any existing toast so they don't stack up
+            const existing = document.getElementById('print-toast');
+            if (existing) document.body.removeChild(existing);
+            
+            document.body.appendChild(toast);
+
             try {
+                // 2. Dispatch the network request
                 const response = await fetch(`/api/print/${id}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ desc: desc })
                 });
                 
+                // Catch hard 500 errors if the backend completely crashed
+                if (!response.ok) {
+                    throw new Error(`Server Error ${response.status}`);
+                }
+
                 const result = await response.json();
                 
+                // 3. Update the toast based on the printer's response
                 if (!result.success) {
-                    alert('Printer Error: ' + (result.message || 'Unknown error'));
+                    toast.innerText = '❌ ' + (result.message || 'Unknown printer error');
+                    toast.style.backgroundColor = '#dc3545';
                 } else {
-                    console.log('Label sent to Brother printer successfully!');
+                    toast.innerText = '✅ Label sent successfully!';
+                    toast.style.backgroundColor = '#28a745';
                 }
             } catch (err) {
-                console.error('Print request failed', err);
-                alert('Failed to connect to backend printer API.');
+                console.error('Print request failed:', err);
+                toast.innerText = '❌ Failed to reach backend. Check logs.';
+                toast.style.backgroundColor = '#dc3545';
             }
+            
+            // 4. Auto-hide the toast after a few seconds
+            setTimeout(() => {
+                if (document.body.contains(toast)) {
+                    document.body.removeChild(toast);
+                }
+            }, 6000);
         };
 
         // Server data for JS

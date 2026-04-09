@@ -1,5 +1,6 @@
 import os
 import textwrap
+import traceback
 from datetime import datetime
 import qrcode
 from PIL import Image, ImageDraw, ImageFont
@@ -56,40 +57,42 @@ def create_label_image(entry_id, description, date_str):
 def print_label(entry_id, description, date_str, printer_identifier, printer_model='QL-600', label_size='62x29'):
     """
     Generates the image and dispatches it directly to the Brother print server.
-    
-    :param printer_identifier: e.g., 'tcp://192.168.1.50' or 'usb://0x04f9:0x209b'
-    :param printer_model: e.g., 'QL-600', 'QL-700'
-    :param label_size: e.g., '62x29' (die-cut) or '62' (continuous)
     """
     try:
-        # 1. Generate the Image
         img = create_label_image(entry_id, description, date_str)
         
-        # 2. Setup Brother QL instructions
         qlr = BrotherQLRaster(printer_model)
         qlr.exception_on_warning = True
         
-        # Brother printers require specific instructions to understand image orientation
         instructions = convert(
             qlr=qlr, 
             images=[img], 
             label=label_size, 
-            rotate='0',      # Set to '90' if the image prints sideways!
-            threshold=70.0,  # Good contrast for text/QR
+            rotate='0',     
+            threshold=70.0, 
             dither=False, 
             compress=False
         )
         
-        # 3. Send the raw binary instructions to the printer backend
-        # Determine backend automatically based on identifier string ('tcp' vs 'usb' vs 'file')
         backend = 'network' if printer_identifier.startswith('tcp') else 'pyusb'
         if printer_identifier.startswith('file'):
-            backend = 'linux_kernel'  # e.g., if targeting /dev/usb/lp0 directly
+            backend = 'linux_kernel'
             
         send(instructions=instructions, printer_identifier=printer_identifier, backend_identifier=backend, blocking=True)
         
         return True, "Label printed successfully."
         
     except Exception as e:
-        print(f"Print error: {e}")
-        return False, str(e)
+        # Log the full error to the systemd journal so we can debug it if needed
+        print(f"Raw Print Error:\n{traceback.format_exc()}")
+        
+        # Format a clean message for the UI
+        msg = str(e)
+        if "No device found" in msg or "ValueError" in msg:
+            msg = "Printer not found. Is it turned on and plugged in?"
+        elif "Access denied" in msg or "insufficient permissions" in msg.lower():
+            msg = "USB Access Denied. Check Proxmox udev rules."
+        elif "No backend available" in msg:
+            msg = "USB driver missing on the server."
+            
+        return False, msg
