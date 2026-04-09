@@ -118,6 +118,23 @@
             </div>
         </div>
 
+        <input class="radiotab" tabindex="1" name="tabs" type="radio" id="tab-printer" />
+        <label class="label" for="tab-printer">Printer</label>
+        <div class="panel" tabindex="1">
+            <div style="padding: 10px;">
+                <p style="font-size: 0.9em; color: #aaa; margin-bottom: 15px;">Configure the Brother QL printer connected directly to the server via USB or Network.</p>
+                
+                <ul class="tree-list">
+                    <li class="tree-item" style="display: flex; flex-direction: column; gap: 8px;">
+                        <div><strong>Identifier:</strong> {{ settings['printer_identifier'] if settings else 'Not configured' }}</div>
+                        <div><strong>Model:</strong> {{ settings['printer_model'] if settings else 'Not configured' }}</div>
+                        <div><strong>Label Size:</strong> {{ settings['label_size'] if settings else 'Not configured' }}</div>
+                    </li>
+                </ul>
+                <button class="cs-btn" style="margin-top: 15px; width: 100%; font-weight: bold;" onclick="document.getElementById('edit-printer-modal').showModal()">Edit Printer Settings</button>
+            </div>
+        </div>
+
         {% if g.user and g.user['username'] == 'admin' %}
         <input class="radiotab" tabindex="1" name="tabs" type="radio" id="tab-users" />
         <label class="label" for="tab-users">Users</label>
@@ -149,6 +166,40 @@
     </div>
 </div>
 
+<dialog id="edit-printer-modal" class="cs-dialog">
+    <div class="heading">
+        <div class="wrapper"><div class="icon"></div><p class="text" style="font-weight: bold;">Edit Printer Settings</p></div>
+        <button class="cs-btn close" type="button" onclick="document.getElementById('edit-printer-modal').close()"></button>
+    </div>
+    <div class="content" style="padding: 20px;">
+        <form method="POST" action="/api/settings" style="display: flex; flex-direction: column; gap: 15px;">
+            <div>
+                <label style="font-weight: bold; margin-bottom: 5px; display: block;">Printer Identifier (USB/TCP):</label>
+                <input type="text" name="printer_identifier" value="{{ settings['printer_identifier'] if settings else 'usb://0x04f9:0x20ce' }}" required class="cs-input" style="width: 100%;" placeholder="e.g. usb://0x04f9:0x20ce">
+            </div>
+            <div>
+                <label style="font-weight: bold; margin-bottom: 5px; display: block;">Model:</label>
+                <select name="printer_model" class="cs-input" style="width: 100%; padding: 8px;">
+                    <option value="QL-600" {% if settings and settings['printer_model'] == 'QL-600' %}selected{% endif %}>QL-600</option>
+                    <option value="QL-700" {% if settings and settings['printer_model'] == 'QL-700' %}selected{% endif %}>QL-700</option>
+                    <option value="QL-800" {% if settings and settings['printer_model'] == 'QL-800' %}selected{% endif %}>QL-800</option>
+                </select>
+            </div>
+            <div>
+                <label style="font-weight: bold; margin-bottom: 5px; display: block;">Label Size:</label>
+                <select name="label_size" class="cs-input" style="width: 100%; padding: 8px;">
+                    <option value="62x29" {% if settings and settings['label_size'] == '62x29' %}selected{% endif %}>62x29 (Standard)</option>
+                    <option value="62" {% if settings and settings['label_size'] == '62' %}selected{% endif %}>62 (Continuous)</option>
+                </select>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
+                <button type="button" class="cs-btn" onclick="document.getElementById('edit-printer-modal').close()">Cancel</button>
+                <button type="submit" class="cs-btn">Save</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+
 {% if g.user and g.user['username'] == 'admin' %}
 <dialog id="add-user-modal" class="cs-dialog">
     <div class="heading">
@@ -160,7 +211,7 @@
             <div><label style="font-weight: bold; margin-bottom: 5px; display: block;">Username:</label>
                 <input type="text" name="username" required class="cs-input" style="width: 100%;" placeholder="e.g. janesmith">
             </div>
-            <div><label style="font-weight: bold; margin-bottom: 5px; display: block;">Password:</label>
+            <div><label style="font-weight: bold; margin-bottom: 5px; display: block;">Temporary Password:</label>
                 <input type="text" name="password" required class="cs-input" style="width: 100%;" placeholder="Give this to the user">
             </div>
             <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
@@ -200,7 +251,7 @@
             <input type="text" id="edit-freezer-name" name="name" required class="cs-input" style="width: 100%;">
             <input type="number" id="edit-freezer-drawers" name="drawers" required class="cs-input" style="width: 100%;">
             <input type="text" id="edit-freezer-location" name="location" class="cs-input" style="width: 100%;">
-            <div style="display: flex; justify-content: space-between;">
+            <div style="display: flex; justify-content: space-between; gap: 10px;">
                 <button type="submit" name="action" value="delete" class="cs-btn danger" onclick="return confirm('Delete this freezer?');">Delete</button>
                 <button type="submit" name="action" value="save" class="cs-btn">Save</button>
             </div>
@@ -229,7 +280,7 @@
     <div class="content" style="padding: 20px;">
         <form id="edit-category-form" method="POST" action="">
             <input type="text" id="edit-category-name" name="category_name" required class="cs-input" style="width: 100%; margin-bottom: 15px;">
-            <div style="display: flex; justify-content: space-between;">
+            <div style="display: flex; justify-content: space-between; gap: 10px;">
                 <button type="submit" name="action" value="delete" class="cs-btn danger" onclick="return confirm('Delete this category?');">Delete</button>
                 <button type="submit" name="action" value="save" class="cs-btn">Save</button>
             </div>
@@ -258,7 +309,7 @@
     <div class="content" style="padding: 20px;">
         <form id="edit-subcat-form" method="POST" action="">
             <input type="text" id="edit-subcat-name" name="subcat_name" required class="cs-input" style="width: 100%; margin-bottom: 15px;">
-            <div style="display: flex; justify-content: space-between;">
+            <div style="display: flex; justify-content: space-between; gap: 10px;">
                 <button type="submit" name="action" value="delete" class="cs-btn danger">Delete</button>
                 <button type="submit" name="action" value="save" class="cs-btn">Save</button>
             </div>
@@ -287,7 +338,7 @@
     <div class="content" style="padding: 20px;">
         <form id="edit-subsub-form" method="POST" action="">
             <input type="text" id="edit-subsub-name" name="subsub_name" required class="cs-input" style="width: 100%; margin-bottom: 15px;">
-            <div style="display: flex; justify-content: space-between;">
+            <div style="display: flex; justify-content: space-between; gap: 10px;">
                 <button type="submit" name="action" value="delete" class="cs-btn danger">Delete</button>
                 <button type="submit" name="action" value="save" class="cs-btn">Save</button>
             </div>

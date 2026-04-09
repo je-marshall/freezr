@@ -34,8 +34,16 @@ def index():
                 cat_node['subcats'].append(sub_node)
                 
         category_tree.append(cat_node)
+
+    # Fetch all users for the admin tab
+    all_users = []
+    if g.user['username'] == 'admin':
+        all_users = db.execute('SELECT id, username FROM user').fetchall()
+
+    # Grab printer settings (id is always 1)
+    settings = db.execute('SELECT * FROM settings WHERE id = 1').fetchone()
     
-    return render_template('manage.html', freezers=freezers, categories=category_tree)
+    return render_template('manage.html', freezers=freezers, categories=category_tree, all_users=all_users, settings=settings)
 
 # ==========================================
 # MAIN CATEGORY ROUTES
@@ -72,13 +80,14 @@ def edit(id):
             db.execute('DELETE FROM subcats WHERE category_id = ? AND auth_id = ?', (id, g.user['id']))
             db.execute('DELETE FROM categories WHERE id = ? AND auth_id = ?', (id, g.user['id']))
             db.commit()
-            flash('Category completely removed.', 'success')
+            flash('Category deleted.', 'success')
     else:
         category_name = request.form.get('category_name')
         if category_name:
             db.execute('UPDATE categories SET category = ? WHERE id = ? AND auth_id = ?', (category_name, id, g.user['id']))
             db.commit()
-            flash(f'Category updated to "{category_name}".', 'success')
+            flash('Category updated.', 'success')
+            
     return redirect(url_for('categories.index'))
 
 # ==========================================
@@ -110,12 +119,13 @@ def edit_subcat(id):
             db.execute('DELETE FROM subsub WHERE subcat_id = ? AND auth_id = ?', (id, g.user['id']))
             db.execute('DELETE FROM subcats WHERE id = ? AND auth_id = ?', (id, g.user['id']))
             db.commit()
-            flash('Sub-category removed.', 'success')
+            flash('Sub-category deleted.', 'success')
     else:
         subcat_name = request.form.get('subcat_name')
-        db.execute('UPDATE subcats SET subcat = ? WHERE id = ? AND auth_id = ?', (subcat_name, id, g.user['id']))
-        db.commit()
-        flash('Sub-category updated.', 'success')
+        if subcat_name:
+            db.execute('UPDATE subcats SET subcat = ? WHERE id = ? AND auth_id = ?', (subcat_name, id, g.user['id']))
+            db.commit()
+            flash('Sub-category updated.', 'success')
     return redirect(url_for('categories.index'))
 
 # ==========================================
@@ -140,7 +150,7 @@ def edit_subsub(id):
     db = get_db()
     
     if action == 'delete':
-        entries = db.execute('SELECT id FROM entries WHERE subsub_id = ? AND auth_id = ?', (id, g.user['id'])).fetchone()
+        entries = db.execute('SELECT id FROM entries WHERE subsub = ? AND auth_id = ?', (id, g.user['id'])).fetchone()
         if entries:
             flash('Cannot delete type because items are currently using it.', 'error')
         else:
@@ -149,7 +159,8 @@ def edit_subsub(id):
             flash('Type removed.', 'success')
     else:
         subsub_name = request.form.get('subsub_name')
-        db.execute('UPDATE subsub SET subsub = ? WHERE id = ? AND auth_id = ?', (subsub_name, id, g.user['id']))
-        db.commit()
-        flash('Type updated.', 'success')
+        if subsub_name:
+            db.execute('UPDATE subsub SET subsub = ? WHERE id = ? AND auth_id = ?', (subsub_name, id, g.user['id']))
+            db.commit()
+            flash('Type updated.', 'success')
     return redirect(url_for('categories.index'))
