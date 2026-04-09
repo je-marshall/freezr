@@ -33,14 +33,6 @@
 {% endblock %}
 
 {% block content %}
-    <div id="print-area">
-        <div id="qrcode-container"></div>
-        <div class="print-text-container">
-            <h2 id="print-desc"></h2>
-            <p id="print-date"></p>
-        </div>
-    </div>
-
     <div class="scroll-container" style="width: 100%; max-height: 65vh; display: flex; flex-direction: column; gap: 12px; margin-top: 25px; padding-right: 10px; box-sizing: border-box; overflow-y: auto;">
         {% for entry in entries %}
             <div class="entry-item cs-btn" data-id="{{ entry.id }}" style="display: flex; justify-content: space-between; align-items: center; padding: 0 20px; min-height: 68px; box-sizing: border-box; cursor: pointer; text-align: left; border-radius: 4px; text-decoration: none;">
@@ -236,29 +228,26 @@
     </dialog>
 
     <script>
-        // Global Print Helper for QR Codes
-        window.triggerPrint = function(id, desc) {
-            const qrContainer = document.getElementById('qrcode-container');
-            const printDesc = document.getElementById('print-desc');
-            const printDate = document.getElementById('print-date');
-
-            if (!qrContainer || !printDesc) return;
-
-            qrContainer.innerHTML = ''; // Clear existing
-            printDesc.innerText = desc.toUpperCase();
-            printDate.innerText = new Date().toLocaleDateString('en-GB');
-
-            new QRCode(qrContainer, {
-                text: id.toString(),
-                width: 128,
-                height: 128,
-                colorDark: "#000000",
-                colorLight: "#ffffff",
-                correctLevel: QRCode.CorrectLevel.H
-            });
-
-            // Trigger the browser print window
-            setTimeout(() => { window.print(); }, 250);
+        // --- NEW BACKEND API PRINT LOGIC ---
+        window.triggerPrint = async function(id, desc) {
+            try {
+                const response = await fetch(`/api/print/${id}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ desc: desc })
+                });
+                
+                const result = await response.json();
+                
+                if (!result.success) {
+                    alert('Printer Error: ' + (result.message || 'Unknown error'));
+                } else {
+                    console.log('Label sent to Brother printer successfully!');
+                }
+            } catch (err) {
+                console.error('Print request failed', err);
+                alert('Failed to connect to backend printer API.');
+            }
         };
 
         // Server data for JS
@@ -270,7 +259,6 @@
     </script>
     
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     
     <script src="{{ url_for('static', filename='checkin.js') }}"></script>
     <script src="{{ url_for('static', filename='inventory.js') }}"></script>

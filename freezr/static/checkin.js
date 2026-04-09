@@ -57,12 +57,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     opt.textContent = sc.subcat.charAt(0).toUpperCase() + sc.subcat.slice(1);
                     subcatSelect.appendChild(opt);
                 });
-                subcatContainer.style.display = 'block';
+                if(subcatContainer) subcatContainer.style.display = 'block';
             } else {
-                subcatContainer.style.display = 'none';
+                if(subcatContainer) subcatContainer.style.display = 'none';
             }
             
-            subsubContainer.style.display = 'none';
+            if(subsubContainer) subsubContainer.style.display = 'none';
         });
     }
 
@@ -79,9 +79,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     opt.textContent = ss.subsub;
                     subsubSelect.appendChild(opt);
                 });
-                subsubContainer.style.display = 'block';
+                if(subsubContainer) subsubContainer.style.display = 'block';
             } else {
-                subsubContainer.style.display = 'none';
+                if(subsubContainer) subsubContainer.style.display = 'none';
             }
         });
     }
@@ -130,21 +130,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 const result = await response.json();
 
                 if (result.success) {
-                    // 2. If successful and Print is requested, trigger the backend API
-                    if (formData.get('print_label')) {
-                        const printResponse = await fetch(`/api/print/${result.entry_id}`, {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ desc: itemDescription })
-                        });
-                        
-                        const printResult = await printResponse.json();
-                        if (!printResult.success) {
-                            alert('Item saved, but backend printing failed: ' + (printResult.message || 'Unknown error'));
-                        }
+                    // 2. If the user checked "Print Label", securely AWAIT the backend printer API
+                    if (formData.get('print_label') && typeof window.triggerPrint === "function") {
+                        await window.triggerPrint(result.entry_id, itemDescription);
                     }
                     
-                    // 3. Reload seamlessly (no print dialog box will interrupt the user!)
+                    // 3. Reload instantly AFTER the print command has successfully cleared the network
                     window.location.reload();
                 } else {
                     alert('Error saving item: ' + (result.message || 'Unknown error'));
