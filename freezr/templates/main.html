@@ -4,11 +4,16 @@
 
 {% block header %}
     <div style="display: flex; width: 100%; margin: 0 auto; gap: 15px; align-items: stretch; box-sizing: border-box;">
+        
         <button id="btn-scan-init" class="cs-btn" type="button" style="padding: 10px; display: flex; justify-content: center; align-items: center; cursor: pointer;">
             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect>
-                <rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="3" height="3"></rect>
-                <line x1="9" y1="9" x2="9.01" y2="9"></line><line x1="20" y1="9" x2="20.01" y2="9"></line>
+                <rect x="3" y="3" width="7" height="7"></rect>
+                <rect x="14" y="3" width="7" height="7"></rect>
+                <rect x="14" y="14" width="7" height="7"></rect>
+                <rect x="3" y="14" width="3" height="3"></rect>
+                <rect x="7" y="18" width="3" height="3"></rect>
+                <line x1="9" y1="9" x2="9.01" y2="9"></line>
+                <line x1="20" y1="9" x2="20.01" y2="9"></line>
             </svg>
         </button>
         
@@ -16,26 +21,27 @@
             Check In
         </button>
         
-        <input type="text" id="search-input" class="cs-input" placeholder="Search inventory..." style="flex-grow: 1; padding: 10px; font-size: 1rem;">
+        <input type="text" id="search-input" class="cs-input" placeholder="Search inventory..." style="flex-grow: 1; padding: 10px; font-weight: bold; font-size: 1rem;">
         
         <button id="btn-search" class="cs-btn" type="button" style="padding: 10px; display: flex; justify-content: center; align-items: center;">
             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
             </svg>
         </button>
     </div>
 {% endblock %}
 
 {% block content %}
-    <div class="scroll-container" style="width: 100%; max-height: 65vh; display: flex; flex-direction: column; gap: 12px; margin-top: 25px; padding-right: 10px; overflow-y: auto;">
+    <div class="scroll-container" style="width: 100%; max-height: 65vh; display: flex; flex-direction: column; gap: 12px; margin-top: 25px; padding-right: 10px; box-sizing: border-box; overflow-y: auto;">
         {% for entry in entries %}
-            <div class="entry-item cs-btn" data-id="{{ entry.id }}" style="display: flex; justify-content: space-between; align-items: center; padding: 0 20px; min-height: 68px; cursor: pointer; border-radius: 4px;">
-                <div style="display: flex; flex-direction: column; gap: 6px; text-align: left;">
-                    <strong style="font-size: 1.2rem;">{{ entry.desc | capitalize }}</strong>
-                    <span style="font-size: 0.9rem; opacity: 0.8;">{{ entry.location }}</span>
+            <div class="entry-item cs-btn" data-id="{{ entry.id }}" style="display: flex; justify-content: space-between; align-items: center; padding: 0 20px; min-height: 68px; box-sizing: border-box; cursor: pointer; border-radius: 4px;">
+                <div style="display: flex; flex-direction: column; justify-content: center; gap: 6px; text-align: left;">
+                    <strong style="font-size: 1.2rem; display: block; font-weight: bold; line-height: 1;">{{ entry.desc | capitalize }}</strong>
+                    <span style="font-size: 0.9rem; opacity: 0.8; font-weight: normal; line-height: 1;">{{ entry.location }}</span>
                 </div>
-                <div style="text-align: right; opacity: 0.8; font-size: 0.9rem;">
-                    <span class="entry-date-display" data-date="{{ entry.date }}">{{ entry.date }}</span>
+                <div style="text-align: right; opacity: 0.8; font-size: 0.9rem; font-weight: normal;">
+                    <span class="entry-date-display" data-date="{{ entry.created }}">{{ entry.created }}</span>
                 </div>
             </div>
         {% else %}
@@ -43,33 +49,156 @@
         {% endfor %}
     </div>
 
-    <dialog id="scanner-modal" class="cs-dialog">...</dialog>
-    <dialog id="checkin-modal" class="cs-dialog">...</dialog>
-    
+    <dialog id="scanner-modal" class="cs-dialog">
+        <div class="heading">
+            <div class="wrapper">
+                <div class="icon"></div>
+                <p class="text" style="font-weight: bold;">Scan QR Code</p>
+            </div>
+            <button id="btn-close-scanner" class="cs-btn close"></button>
+        </div>
+        <div class="content" style="padding: 20px; text-align: center;">
+            <div id="reader" style="width: 100%; max-width: 400px; margin: 0 auto; background: var(--secondary-bg); border: 1px solid var(--border-dark);"></div>
+            <button id="btn-cancel-scanner" class="cs-btn danger" style="margin-top: 20px; font-weight: bold; width: 100%; padding: 10px;">Cancel Scan</button>
+        </div>
+    </dialog>
+
+    <dialog id="checkin-modal" class="cs-dialog">
+        <div class="heading">
+            <div class="wrapper"><div class="icon"></div><p class="text" style="font-weight: bold;">Check in item</p></div>
+            <button id="btn-close-modal" class="cs-btn close"></button>
+        </div>
+        <div class="content" style="padding: 20px; text-align: left;">
+            <form method="POST" action="{{ url_for('checkin.checkin') }}" style="display: flex; flex-direction: column; gap: 15px;">
+                <div>
+                    <label style="display: block; font-weight: bold; margin-bottom: 5px;">Category:</label>
+                    <select id="category" name="category" required class="cs-select" style="width: 100%; padding: 5px;">
+                        <option value="">-- Select Category --</option>
+                        {% for cat in categories %}
+                            <option value="{{ cat.id }}">{{ cat.category | capitalize }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div id="subcat-container" style="display: none;">
+                    <label style="display: block; font-weight: bold; margin-bottom: 5px;">Sub-Category:</label>
+                    <select id="subcat" name="subcat" class="cs-select" style="width: 100%; padding: 5px;"></select>
+                </div>
+                <div id="subsub-container" style="display: none;">
+                    <label style="display: block; font-weight: bold; margin-bottom: 5px;">Type:</label>
+                    <select id="subsub" name="subsub" class="cs-select" style="width: 100%; padding: 5px;"></select>
+                </div>
+                <div id="checkboxes-container" style="display: flex; gap: 15px; flex-wrap: wrap;">
+                    <label id="lbl-skin" style="display:none;"><input type="checkbox" name="skin" value="1"> Skin on</label>
+                    <label id="lbl-bone" style="display:none;"><input type="checkbox" name="bone" value="1"> Bone in</label>
+                    <label id="lbl-minced" style="display:none;"><input type="checkbox" name="minced" value="1"> Minced</label>
+                    <label id="lbl-grated" style="display:none;"><input type="checkbox" name="grated" value="1"> Grated</label>
+                    <label id="lbl-cooked" style="display:none;"><input type="checkbox" name="cooked" value="1"> Cooked</label>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <div style="flex: 2;">
+                        <label style="display: block; font-weight: bold; margin-bottom: 5px;">Location:</label>
+                        <select id="freezer" name="freezer" required class="cs-select" style="width: 100%;">
+                            <option value="">-- Freezer --</option>
+                            {% for freezer in freezers %}
+                                <option value="{{ freezer.id }}" data-drawers="{{ freezer.drawers }}">{{ freezer.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div style="flex: 1;">
+                        <label style="display: block; font-weight: bold; margin-bottom: 5px;">Drawer:</label>
+                        <select id="drawer" name="drawer" required class="cs-select" style="width: 100%;"></select>
+                    </div>
+                    <div style="flex: 1;">
+                        <label style="display: block; font-weight: bold; margin-bottom: 5px;">Qty:</label>
+                        <select name="quantity" class="cs-select" style="width: 100%;">
+                            {% for i in range(1, 11) %}<option value="{{ i }}">{{ i }}</option>{% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <div>
+                    <label style="display: block; font-weight: bold; margin-bottom: 5px;">Notes:</label>
+                    <textarea name="notes" rows="2" class="cs-input" style="width: 100%;" placeholder="Optional notes..."></textarea>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                    <label style="font-weight: bold; cursor: pointer;">
+                        <input type="checkbox" name="print_label" value="1" checked> Print QR Label
+                    </label>
+                    <div style="display: flex; gap: 10px;">
+                        <button id="btn-cancel-modal" type="button" class="cs-btn">Cancel</button>
+                        <button type="submit" class="cs-btn">Save Item</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </dialog>
+
     <dialog id="view-modal" class="cs-dialog">
         <div class="heading">
-            <div class="wrapper"><div class="icon"></div><p class="text" id="view-header-title">Item Details</p></div>
+            <div class="wrapper"><div class="icon"></div><p class="text" id="view-header-title" style="font-weight: bold;">Item Details</p></div>
             <button id="btn-close-view" class="cs-btn close"></button>
         </div>
-        <div class="content" style="padding: 20px;">
+        <div class="content" style="padding: 20px; text-align: left; display: flex; flex-direction: column; gap: 15px;">
             <div id="view-dynamic-fields" style="display: flex; flex-direction: column; gap: 10px;"></div>
-            <div id="view-notes-container" style="display: none; margin-top: 10px;">
-                <label style="display: block; font-weight: bold;">Notes:</label>
-                <textarea id="view-notes" class="cs-input" disabled rows="2" style="width: 100%; color: white !important; opacity: 1;"></textarea>
+            <div id="view-notes-container" style="display: none;">
+                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Notes:</label>
+                <textarea id="view-notes" class="cs-input" disabled rows="2" style="width: 100%; color: white !important; opacity: 1; resize: none;"></textarea>
             </div>
             <div style="display: flex; justify-content: space-between; gap: 10px; margin-top: 20px;">
-                <button type="button" id="btn-print-init" class="cs-btn" style="flex: 1; font-weight: bold;">PRINT</button>
-                <button type="button" id="btn-move-init" class="cs-btn" style="flex: 1; font-weight: bold;">MOVE</button>
-                <button type="button" id="btn-checkout-init" class="cs-btn" style="flex: 1; font-weight: bold;">CHECK OUT</button>
+                <button type="button" id="btn-print-init" class="cs-btn" style="flex: 1; font-weight: bold; padding: 10px;">PRINT</button>
+                <button type="button" id="btn-move-init" class="cs-btn" style="flex: 1; font-weight: bold; padding: 10px;">MOVE</button>
+                <button type="button" id="btn-checkout-init" class="cs-btn" style="flex: 1; font-weight: bold; padding: 10px;">CHECK OUT</button>
             </div>
         </div>
     </dialog>
 
-    <dialog id="confirm-delete-modal" class="cs-dialog">...</dialog>
-    <dialog id="move-modal" class="cs-dialog">...</dialog>
+    <dialog id="move-modal" class="cs-dialog">
+        <div class="heading">
+            <div class="wrapper"><div class="icon"></div><p class="text" style="font-weight: bold;">Move Item</p></div>
+            <button id="btn-close-move" class="cs-btn close"></button>
+        </div>
+        <div class="content" style="padding: 20px;">
+            <form method="POST" action="{{ url_for('move.move') }}" style="display: flex; flex-direction: column; gap: 15px;">
+                <input type="hidden" name="entry_id" id="move-entry-id">
+                <div style="display: flex; gap: 10px;">
+                    <div style="flex: 2;">
+                        <label style="display: block; font-weight: bold;">New Freezer:</label>
+                        <select id="move-freezer" name="freezer" required class="cs-select" style="width: 100%;">
+                            <option value="">-- Select Freezer --</option>
+                            {% for freezer in freezers %}
+                                <option value="{{ freezer.id }}" data-drawers="{{ freezer.drawers }}">{{ freezer.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div style="flex: 1;">
+                        <label style="display: block; font-weight: bold;">Drawer:</label>
+                        <select id="move-drawer" name="drawer" required class="cs-select" style="width: 100%;"></select>
+                    </div>
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                    <button id="btn-cancel-move" type="button" class="cs-btn">Cancel</button>
+                    <button type="submit" class="cs-btn">Confirm Move</button>
+                </div>
+            </form>
+        </div>
+    </dialog>
+
+    <dialog id="confirm-delete-modal" class="cs-dialog">
+        <div class="heading">
+            <div class="wrapper"><div class="icon"></div><p class="text" style="font-weight: bold;">Check Out Item</p></div>
+            <button id="btn-close-confirm" class="cs-btn close"></button>
+        </div>
+        <div class="content" style="padding: 20px; text-align: center;">
+            <p style="font-size: 1.1rem; margin-bottom: 20px;">Remove this item from inventory?</p>
+            <form method="POST" action="{{ url_for('checkout.checkout') }}" style="display: flex; gap: 10px;">
+                <input type="hidden" name="entry_id" id="checkout-entry-id">
+                <button type="button" id="btn-cancel-confirm" class="cs-btn" style="flex: 1;">Cancel</button>
+                <button type="submit" class="cs-btn danger" style="flex: 1;">Check Out</button>
+            </form>
+        </div>
+    </dialog>
 
     <script>
-        // Store data for other JS files to use
+        // Ensure data is available before scripts load
         window.freezrData = {
             subcats: {{ subcats | tojson | safe }},
             subsubs: {{ subsubs | tojson | safe }},
@@ -78,7 +207,6 @@
     </script>
     
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-    
     <script src="{{ url_for('static', filename='print.js') }}"></script>
     <script src="{{ url_for('static', filename='checkin.js') }}"></script>
     <script src="{{ url_for('static', filename='inventory.js') }}"></script>
