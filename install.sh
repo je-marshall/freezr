@@ -17,8 +17,8 @@ CURRENT_USER=$(whoami)
 echo "[1/5] Installing system prerequisites (requires sudo)..."
 sudo dnf install -y epel-release
 sudo dnf update -y
-sudo dnf install -y python3 python3-pip python3-devel gcc sqlite sqlite-devel git
-
+sudo dnf install -y python3 python3-pip python3-devel gcc sqlite sqlite-devel git \
+    libjpeg-turbo-devel zlib-devel freetype-devel libusb-1.0
 # 3. Create virtual environment
 echo "[2/5] Creating Python virtual environment..."
 python3 -m venv "$VENV_DIR"

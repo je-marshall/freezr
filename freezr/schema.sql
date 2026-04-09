@@ -4,6 +4,7 @@ DROP TABLE IF EXISTS subcats;
 DROP TABLE IF EXISTS subsub;
 DROP TABLE IF EXISTS freezers;
 DROP TABLE IF EXISTS entries;
+DROP TABLE IF EXISTS settings;
 
 CREATE TABLE user (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -53,6 +54,16 @@ CREATE TABLE entries (
     cooked BOOLEAN NOT NULL CHECK (cooked IN (0, 1)) DEFAULT 0,
     quantity INTEGER NOT NULL DEFAULT 1,
     notes TEXT,
-    created TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    auth_id INTEGER NOT NULL REFERENCES user (id)
+    auth_id INTEGER NOT NULL REFERENCES user (id),
+    date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE settings (
+    id INTEGER PRIMARY KEY CHECK (id = 1),
+    printer_identifier TEXT NOT NULL,
+    printer_model TEXT NOT NULL DEFAULT 'QL-600',
+    label_size TEXT NOT NULL DEFAULT '62x29'
+);
+
+-- Insert the default USB settings for the Brother QL-600
+INSERT INTO settings (id, printer_identifier, printer_model, label_size) VALUES (1, 'usb://0x04f9:0x20c0', 'QL-600', '62x29');

@@ -28,84 +28,89 @@ document.addEventListener('DOMContentLoaded', function() {
     const catSelect = document.getElementById('category');
     const subcatSelect = document.getElementById('subcat');
     const subsubSelect = document.getElementById('subsub');
+    const subcatContainer = document.getElementById('subcat-container');
+    const subsubContainer = document.getElementById('subsub-container');
 
     if (catSelect) {
         catSelect.addEventListener('change', function() {
-            const catId = parseInt(this.value);
-            document.getElementById('subcat-container').style.display = 'none';
-            subcatSelect.required = false;
-            subcatSelect.innerHTML = '<option value="">-- Select Sub-Category --</option>';
-            document.getElementById('subsub-container').style.display = 'none';
-            subsubSelect.required = false;
-            subsubSelect.innerHTML = '<option value="">-- Select Type --</option>';
-
-            ['skin', 'bone', 'minced', 'grated', 'cooked'].forEach(flag => {
-                const label = document.getElementById('lbl-' + flag);
-                const checkbox = document.getElementById('chk-' + flag);
-                if (catId && catRules[catId] && catRules[catId].includes(flag)) {
-                    label.style.display = 'inline-block';
-                } else {
-                    label.style.display = 'none';
-                    if (checkbox) checkbox.checked = false;
-                }
+            const catId = this.value;
+            
+            document.querySelectorAll('.cs-checkbox').forEach(cb => {
+                cb.checked = false;
+                cb.parentElement.style.display = 'none';
             });
 
-            if (!catId) return;
-            const filteredSubcats = subcats.filter(s => s.category_id === catId);
-            if (filteredSubcats.length > 0) {
-                filteredSubcats.forEach(s => {
-                    subcatSelect.innerHTML += `<option value="${s.id}">${s.subcat}</option>`;
+            if (catRules[catId]) {
+                catRules[catId].forEach(rule => {
+                    const lbl = document.getElementById('lbl-' + rule);
+                    if (lbl) lbl.style.display = 'inline-block';
                 });
-                document.getElementById('subcat-container').style.display = 'block';
-                subcatSelect.required = true;
             }
+
+            subcatSelect.innerHTML = '<option value="">-- Select Sub-Category --</option>';
+            const filteredSubcats = subcats.filter(sc => sc.category_id == catId);
+            
+            if (filteredSubcats.length > 0) {
+                filteredSubcats.forEach(sc => {
+                    const opt = document.createElement('option');
+                    opt.value = sc.id;
+                    opt.textContent = sc.subcat.charAt(0).toUpperCase() + sc.subcat.slice(1);
+                    subcatSelect.appendChild(opt);
+                });
+                subcatContainer.style.display = 'block';
+            } else {
+                subcatContainer.style.display = 'none';
+            }
+            
+            subsubContainer.style.display = 'none';
         });
     }
 
     if (subcatSelect) {
         subcatSelect.addEventListener('change', function() {
-            const subcatId = parseInt(this.value);
-            document.getElementById('subsub-container').style.display = 'none';
-            subsubSelect.required = false;
+            const subcatId = this.value;
             subsubSelect.innerHTML = '<option value="">-- Select Type --</option>';
-
-            if (!subcatId) return;
-            const filteredSubsubs = subsubs.filter(s => s.subcat_id === subcatId);
+            const filteredSubsubs = subsubs.filter(ss => ss.subcat_id == subcatId);
+            
             if (filteredSubsubs.length > 0) {
-                filteredSubsubs.forEach(s => {
-                    subsubSelect.innerHTML += `<option value="${s.id}">${s.subsub}</option>`;
+                filteredSubsubs.forEach(ss => {
+                    const opt = document.createElement('option');
+                    opt.value = ss.id;
+                    opt.textContent = ss.subsub;
+                    subsubSelect.appendChild(opt);
                 });
-                document.getElementById('subsub-container').style.display = 'block';
-                subsubSelect.required = true;
+                subsubContainer.style.display = 'block';
+            } else {
+                subsubContainer.style.display = 'none';
             }
         });
     }
 
-    // --- 3. Dynamic Drawer Logic ---
     const freezerSelect = document.getElementById('freezer');
     const drawerSelect = document.getElementById('drawer');
 
-    if (freezerSelect && drawerSelect) {
+    if (freezerSelect) {
         freezerSelect.addEventListener('change', function() {
             drawerSelect.innerHTML = '<option value="">-- Select Drawer --</option>';
-            drawerSelect.required = false;
-            if (!this.value) return;
             const selectedOption = this.options[this.selectedIndex];
-            const numDrawers = parseInt(selectedOption.getAttribute('data-drawers')) || 4;
-            for (let i = 1; i <= numDrawers; i++) {
-                drawerSelect.innerHTML += `<option value="${i}">${i}</option>`;
+            const drawers = parseInt(selectedOption.getAttribute('data-drawers')) || 0;
+            
+            for (let i = 1; i <= drawers; i++) {
+                const opt = document.createElement('option');
+                opt.value = i;
+                opt.textContent = i;
+                drawerSelect.appendChild(opt);
             }
-            drawerSelect.required = true;
         });
     }
 
-    // --- 4. AJAX Submission & Printing ---
+    // --- 3. Form Submission with BACKEND Print Support ---
     if (checkinForm) {
         checkinForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             
-            // Build the description for the label BEFORE we submit
-            let itemDescription = 'Freezer Item';
+            // Determine item description for the physical label
+            let itemDescription = 'UNKNOWN ITEM';
             if (subsubSelect && subsubSelect.value) {
                 itemDescription = subsubSelect.options[subsubSelect.selectedIndex].text;
             } else if (subcatSelect && subcatSelect.value) {
@@ -115,6 +120,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const formData = new FormData(checkinForm);
             
             try {
+                // 1. Send the database check-in command
                 const response = await fetch(checkinForm.action, {
                     method: 'POST',
                     body: formData,
@@ -124,18 +130,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 const result = await response.json();
 
                 if (result.success) {
-                    if (formData.get('print_label') && typeof window.triggerPrint === "function") {
-                        // Trigger the print dialog
-                        window.triggerPrint(result.entry_id, itemDescription);
+                    // 2. If successful and Print is requested, trigger the backend API
+                    if (formData.get('print_label')) {
+                        const printResponse = await fetch(`/api/print/${result.entry_id}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ desc: itemDescription })
+                        });
                         
-                        // Wait for the print dialog to open/close before reloading
-                        setTimeout(() => {
-                            window.location.reload();
-                        }, 1000);
-                    } else {
-                        // No print requested, reload instantly
-                        window.location.reload();
+                        const printResult = await printResponse.json();
+                        if (!printResult.success) {
+                            alert('Item saved, but backend printing failed: ' + (printResult.message || 'Unknown error'));
+                        }
                     }
+                    
+                    // 3. Reload seamlessly (no print dialog box will interrupt the user!)
+                    window.location.reload();
                 } else {
                     alert('Error saving item: ' + (result.message || 'Unknown error'));
                 }
