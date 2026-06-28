@@ -28,6 +28,7 @@ Arguments:
   <device>    SD card block device (e.g. /dev/sdb, /dev/mmcblk0)
 
 Options:
+  --hostname  Hostname for the Pi (default: freezr, accessible as freezr.local)
   --ssid      WiFi network name
   --pass      WiFi password (required if --ssid is set)
   -h, --help  Show this help
@@ -41,14 +42,16 @@ EOF
 POSITIONAL=()
 WIFI_SSID=""
 WIFI_PASS=""
+HOSTNAME="freezr"
 
 while [[ $# -gt 0 ]]; do
     case $1 in
-        -h|--help) usage; exit 0 ;;
-        --ssid)    WIFI_SSID="$2"; shift 2 ;;
-        --pass)    WIFI_PASS="$2"; shift 2 ;;
-        -*)        echo "Unknown option: $1"; echo; usage; exit 1 ;;
-        *)         POSITIONAL+=("$1"); shift ;;
+        -h|--help)     usage; exit 0 ;;
+        --hostname)    HOSTNAME="$2"; shift 2 ;;
+        --ssid)        WIFI_SSID="$2"; shift 2 ;;
+        --pass)        WIFI_PASS="$2"; shift 2 ;;
+        -*)            echo "Unknown option: $1"; echo; usage; exit 1 ;;
+        *)             POSITIONAL+=("$1"); shift ;;
     esac
 done
 
@@ -131,6 +134,10 @@ mount "$PART2" "$ROOT_MNT"
 
 echo "==> Enabling SSH..."
 touch "$BOOT_MNT/ssh"
+
+echo "==> Setting hostname to '$HOSTNAME'..."
+echo "$HOSTNAME" > "$ROOT_MNT/etc/hostname"
+sed -i "s/raspberrypi/$HOSTNAME/g" "$ROOT_MNT/etc/hosts"
 
 # Configure WiFi — written directly into the image so it's live before firstrun.
 # Writes both NetworkManager keyfile (Pi OS Bookworm) and wpa_supplicant.conf
@@ -240,4 +247,4 @@ echo ""
 echo "    Insert the SD card into your Pi and power it on."
 echo "    First boot will take ~5 minutes to install everything."
 echo "    The login password will be written to /home/pi/freezr-setup.log on the Pi."
-echo "    Freezr will be available at http://<pi-ip>:8000"
+echo "    Freezr will be available at http://${HOSTNAME}.local:8000"
