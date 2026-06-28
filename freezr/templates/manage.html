@@ -135,33 +135,24 @@
             </div>
         </div>
 
-        {% if g.user and g.user['username'] == 'admin' %}
-        <input class="radiotab" tabindex="1" name="tabs" type="radio" id="tab-users" />
-        <label class="label" for="tab-users">Users</label>
+        <input class="radiotab" tabindex="1" name="tabs" type="radio" id="tab-account" />
+        <label class="label" for="tab-account">Account</label>
         <div class="panel" tabindex="1">
             <div style="padding: 10px;">
-                <p style="font-size: 0.9em; color: #aaa; margin-bottom: 15px;">Create accounts for family members. Only the admin can see this tab.</p>
-                <ul class="tree-list">
-                    {% for u in all_users %}
-                    <li class="tree-item" style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-size: 1.1rem; color: var(--text-main);">
-                            <strong>{{ u['username'] }}</strong> 
-                            {% if u['id'] == 1 %}<span style="color: #666; font-size: 0.8em;">(Admin Account)</span>{% endif %}
-                        </span>
-                        {% if u['id'] != 1 %}
-                        <form method="POST" action="{{ url_for('auth.admin_delete_user', id=u['id']) }}" style="margin: 0;" onsubmit="return confirm('WARNING: Are you sure you want to delete user \'{{ u['username'] }}\'? All their items and freezers will be lost forever!');">
-                            <button type="submit" class="cs-btn danger tree-btn">Delete</button>
-                        </form>
-                        {% endif %}
-                    </li>
-                    {% else %}
-                    <p style="padding: 10px 0;">No additional users found.</p>
-                    {% endfor %}
-                </ul>
-                <button class="cs-btn" style="margin-top: 15px; width: 100%; font-weight: bold;" onclick="document.getElementById('add-user-modal').showModal()">+ Add New User</button>
+                <p style="font-size: 0.9em; color: #aaa; margin-bottom: 15px;">Change the login password for this Freezr instance.</p>
+                <form method="POST" action="{{ url_for('auth.change_password') }}" style="display: flex; flex-direction: column; gap: 12px;">
+                    <div>
+                        <label style="font-weight: bold; margin-bottom: 5px; display: block;">Current Password:</label>
+                        <input type="password" name="current_password" required class="cs-input" style="width: 100%;">
+                    </div>
+                    <div>
+                        <label style="font-weight: bold; margin-bottom: 5px; display: block;">New Password:</label>
+                        <input type="password" name="new_password" required class="cs-input" style="width: 100%;">
+                    </div>
+                    <button type="submit" class="cs-btn" style="width: 100%;">Change Password</button>
+                </form>
             </div>
         </div>
-        {% endif %}
 
     </div>
 </div>
@@ -199,29 +190,6 @@
         </form>
     </div>
 </dialog>
-
-{% if g.user and g.user['username'] == 'admin' %}
-<dialog id="add-user-modal" class="cs-dialog">
-    <div class="heading">
-        <div class="wrapper"><div class="icon"></div><p class="text" style="font-weight: bold;">Create New User</p></div>
-        <button class="cs-btn close" type="button" onclick="document.getElementById('add-user-modal').close()"></button>
-    </div>
-    <div class="content" style="padding: 20px;">
-        <form method="POST" action="{{ url_for('auth.admin_add_user') }}" style="display: flex; flex-direction: column; gap: 15px;">
-            <div><label style="font-weight: bold; margin-bottom: 5px; display: block;">Username:</label>
-                <input type="text" name="username" required class="cs-input" style="width: 100%;" placeholder="e.g. janesmith">
-            </div>
-            <div><label style="font-weight: bold; margin-bottom: 5px; display: block;">Temporary Password:</label>
-                <input type="text" name="password" required class="cs-input" style="width: 100%;" placeholder="Give this to the user">
-            </div>
-            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
-                <button type="button" class="cs-btn" onclick="document.getElementById('add-user-modal').close()">Cancel</button>
-                <button type="submit" class="cs-btn">Create User</button>
-            </div>
-        </form>
-    </div>
-</dialog>
-{% endif %}
 
 <dialog id="add-freezer-modal" class="cs-dialog">
     <div class="heading">

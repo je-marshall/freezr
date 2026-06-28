@@ -35,15 +35,10 @@ def index():
                 
         category_tree.append(cat_node)
 
-    # Fetch all users for the admin tab
-    all_users = []
-    if g.user['username'] == 'admin':
-        all_users = db.execute('SELECT id, username FROM user').fetchall()
-
     # Grab printer settings (id is always 1)
     settings = db.execute('SELECT * FROM settings WHERE id = 1').fetchone()
-    
-    return render_template('manage.html', freezers=freezers, categories=category_tree, all_users=all_users, settings=settings)
+
+    return render_template('manage.html', freezers=freezers, categories=category_tree, settings=settings)
 
 # ==========================================
 # MAIN CATEGORY ROUTES

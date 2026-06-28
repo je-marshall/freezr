@@ -4,40 +4,22 @@ from flask import (
 )
 from werkzeug.security import check_password_hash, generate_password_hash
 from freezr.db import get_db
-from freezr.helpers import seed_default_categories
 
 bp = Blueprint('auth', __name__, url_prefix='/auth')
-
-# --- Inject users to templates globally so you don't have to edit other Python files! ---
-@bp.app_context_processor
-def inject_all_users():
-    if g.get('user') and g.user['username'] == 'admin':
-        users = get_db().execute('SELECT id, username FROM user').fetchall()
-        return dict(all_users=users)
-    return dict(all_users=[])
 
 @bp.route('/login', methods=('GET', 'POST'))
 def login():
     if request.method == 'POST':
-        username = request.form['username']
         password = request.form['password']
         db = get_db()
-        error = None
-        user = db.execute(
-            'SELECT * FROM user WHERE username = ?', (username,)
-        ).fetchone()
+        user = db.execute('SELECT * FROM user WHERE id = 1').fetchone()
 
-        if user is None:
-            error = 'Incorrect username.'
-        elif not check_password_hash(user['password'], password):
-            error = 'Incorrect password.'
-
-        if error is None:
+        if user is None or not check_password_hash(user['password'], password):
+            flash('Incorrect password.')
+        else:
             session.clear()
             session['user_id'] = user['id']
-            return redirect(url_for('index.index'))  # Assuming endpoint is index.index
-
-        flash(error)
+            return redirect(url_for('index.index'))
 
     return render_template('auth/login.html')
 
@@ -65,65 +47,22 @@ def login_required(view):
         return view(**kwargs)
     return wrapped_view
 
-# ==========================================
-# ADMIN ROUTES (User Management)
-# ==========================================
-
-@bp.route('/admin/add_user', methods=('POST',))
+@bp.route('/change_password', methods=('POST',))
 @login_required
-def admin_add_user():
-    if g.user['username'] != 'admin':
-        flash('Access denied. Admin only.')
-        return redirect(request.referrer or url_for('index.index'))
-        
-    username = request.form['username']
-    password = request.form['password']
+def change_password():
+    current = request.form.get('current_password', '')
+    new_password = request.form.get('new_password', '')
     db = get_db()
-    error = None
+    user = db.execute('SELECT * FROM user WHERE id = 1').fetchone()
 
-    if not username or not password:
-        error = 'Username and Password are required.'
-
-    if error is None:
-        try:
-            # Create user
-            cursor = db.execute(
-                "INSERT INTO user (username, password) VALUES (?, ?)",
-                (username, generate_password_hash(password)),
-            )
-            new_user_id = cursor.lastrowid
-            
-            # Seed default Kitchen Freezer and Categories
-            db.execute(
-                "INSERT INTO freezers (name, drawers, location, auth_id) VALUES (?, ?, ?, ?)",
-                ('Kitchen Freezer', 4, 'Kitchen', new_user_id)
-            )
-            seed_default_categories(new_user_id)
-            db.commit()
-            
-            flash(f"User '{username}' created successfully!")
-        except db.IntegrityError:
-            flash(f"User '{username}' already exists.")
+    if not check_password_hash(user['password'], current):
+        flash('Current password is incorrect.')
+    elif not new_password:
+        flash('New password cannot be empty.')
     else:
-        flash(error)
+        db.execute('UPDATE user SET password = ? WHERE id = 1',
+                   (generate_password_hash(new_password),))
+        db.commit()
+        flash('Password updated.')
 
-    return redirect(request.referrer)
-
-@bp.route('/admin/delete_user/<int:id>', methods=('POST',))
-@login_required
-def admin_delete_user(id):
-    if g.user['username'] != 'admin':
-        flash('Access denied. Admin only.')
-        return redirect(request.referrer or url_for('index.index'))
-        
-    if id == 1:
-        flash('Cannot delete the primary admin account.')
-        return redirect(request.referrer)
-
-    db = get_db()
-    # Note: SQLite should cascade delete their freezers/items if foreign keys are set up, 
-    # but we delete the user safely here regardless.
-    db.execute('DELETE FROM user WHERE id = ?', (id,))
-    db.commit()
-    flash('User account completely removed.')
-    return redirect(request.referrer)
+    return redirect(request.referrer or url_for('index.index'))
