@@ -192,13 +192,12 @@ rsync -a --exclude='venv' --exclude='instance' --exclude='__pycache__' \
     "$APP_DIR/" "$ROOT_MNT/home/pi/freezr/"
 chown -R 1000:1000 "$ROOT_MNT/home/pi/freezr"
 
-echo "==> Writing firstrun setup script..."
-cat > "$BOOT_MNT/firstrun.sh" << 'FIRSTRUN'
-#!/bin/bash
-exec > /home/pi/freezr-setup.log 2>&1
-set -e
+echo "==> Writing first-boot setup script and service..."
 
-echo "=== Freezr first-boot setup starting ==="
+# Write the setup script to the rootfs
+cat > "$ROOT_MNT/opt/freezr-setup.sh" << 'SETUP'
+#!/bin/bash
+set -e
 
 apt-get update -y
 apt-get install -y \
@@ -225,22 +224,37 @@ systemctl daemon-reload
 systemctl enable freezr
 systemctl start freezr || true
 
-# Remove ourselves from cmdline.txt so we don't run again
-sed -i 's| systemd.run=/boot/firmware/firstrun.sh[^ ]*||g' /boot/firmware/cmdline.txt
-rm -f /boot/firmware/firstrun.sh
+systemctl disable freezr-setup.service
+rm -f /opt/freezr-setup.sh
 
-echo "=== Freezr setup complete. Password is in this log file. ==="
-FIRSTRUN
+echo "=== Freezr setup complete. ==="
+SETUP
 
-chmod +x "$BOOT_MNT/firstrun.sh"
+chmod +x "$ROOT_MNT/opt/freezr-setup.sh"
 
-# Modify cmdline.txt to trigger firstrun.sh on first boot
-CMDLINE="$BOOT_MNT/cmdline.txt"
-if [ -f "$CMDLINE" ]; then
-    sed -i '$ s/$/ systemd.run=\/boot\/firmware\/firstrun.sh systemd.run_success_action=reboot systemd.unit=kernel-command-line.target/' "$CMDLINE"
-else
-    echo "Warning: cmdline.txt not found at $CMDLINE — firstrun may not trigger automatically."
-fi
+# Write a systemd service that runs the script once on first boot
+cat > "$ROOT_MNT/etc/systemd/system/freezr-setup.service" << 'SERVICE'
+[Unit]
+Description=Freezr First Boot Setup
+After=network-online.target
+Wants=network-online.target
+ConditionPathExists=/opt/freezr-setup.sh
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /opt/freezr-setup.sh
+StandardOutput=append:/home/pi/freezr-setup.log
+StandardError=append:/home/pi/freezr-setup.log
+TimeoutStartSec=600
+
+[Install]
+WantedBy=multi-user.target
+SERVICE
+
+# Enable the service
+mkdir -p "$ROOT_MNT/etc/systemd/system/multi-user.target.wants"
+ln -sf /etc/systemd/system/freezr-setup.service \
+    "$ROOT_MNT/etc/systemd/system/multi-user.target.wants/freezr-setup.service"
 
 echo "==> Done!"
 echo ""
