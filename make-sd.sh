@@ -29,6 +29,7 @@ Arguments:
 
 Options:
   --hostname  Hostname for the Pi (default: freezr, accessible as freezr.local)
+  --pi-pass   Password for the pi user (default: raspberry) — change this!
   --ssid      WiFi network name
   --pass      WiFi password (required if --ssid is set)
   -h, --help  Show this help
@@ -47,11 +48,13 @@ POSITIONAL=()
 WIFI_SSID=""
 WIFI_PASS=""
 HOSTNAME="freezr"
+PI_PASS="raspberry"
 
 while [[ $# -gt 0 ]]; do
     case $1 in
         -h|--help)     usage; exit 0 ;;
         --hostname)    HOSTNAME="$2"; shift 2 ;;
+        --pi-pass)     PI_PASS="$2"; shift 2 ;;
         --ssid)        WIFI_SSID="$2"; shift 2 ;;
         --pass)        WIFI_PASS="$2"; shift 2 ;;
         -*)            echo "Unknown option: $1"; echo; usage; exit 1 ;;
@@ -138,6 +141,10 @@ mount "$PART2" "$ROOT_MNT"
 
 echo "==> Enabling SSH..."
 touch "$BOOT_MNT/ssh"
+
+echo "==> Configuring pi user..."
+PI_PASS_HASH=$(openssl passwd -6 "$PI_PASS")
+echo "pi:${PI_PASS_HASH}" > "$BOOT_MNT/userconf.txt"
 
 echo "==> Setting hostname to '$HOSTNAME'..."
 echo "$HOSTNAME" > "$ROOT_MNT/etc/hostname"
