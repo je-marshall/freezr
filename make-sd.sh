@@ -34,8 +34,12 @@ Options:
   -h, --help  Show this help
 
 Examples:
-  sudo $0 raspios-bookworm-lite.img.xz /dev/sdb
-  sudo $0 raspios-bookworm-lite.img.xz /dev/sdb --ssid MyWifi --pass secret123
+  sudo $0 raspios-bookworm-arm64-lite.img.xz /dev/sdb                        # Pi 3/4/5
+  sudo $0 raspios-bookworm-armhf-lite.img.xz /dev/sdb --ssid MyWifi --pass x  # Pi Zero W (ARMv6)
+
+Note: Pi Zero / Zero W requires the 32-bit armhf image (Bookworm or earlier).
+      Trixie (2025+) has dropped ARMv6 support. First boot on a Zero W takes
+      ~20-30 mins as some Python packages compile from source.
 EOF
 }
 
@@ -245,7 +249,7 @@ Type=oneshot
 ExecStart=/bin/bash /opt/freezr-setup.sh
 StandardOutput=append:/home/pi/freezr-setup.log
 StandardError=append:/home/pi/freezr-setup.log
-TimeoutStartSec=600
+TimeoutStartSec=1800
 
 [Install]
 WantedBy=multi-user.target
