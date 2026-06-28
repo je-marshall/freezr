@@ -169,10 +169,14 @@ password_encrypted = false
 enabled = true
 password_authentication = true
 ${WIFI_SECTION}
+
 [locale]
 keymap = "gb"
 timezone = "Europe/London"
 EOF
+
+# Belt and braces: legacy ssh file still works on Bookworm and costs nothing
+touch "$BOOT_MNT/ssh"
 
 # Also write a NetworkManager keyfile directly into the rootfs as a fallback
 # for WiFi — custom.toml WiFi can be unreliable on some Bookworm builds.
