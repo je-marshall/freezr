@@ -139,24 +139,44 @@ echo "==> Mounting partitions..."
 mount "$PART1" "$BOOT_MNT"
 mount "$PART2" "$ROOT_MNT"
 
-echo "==> Enabling SSH..."
-touch "$BOOT_MNT/ssh"
+# Write custom.toml — the Pi OS Bookworm way to configure hostname, user,
+# SSH, and WiFi headlessly from the boot partition in one file.
+echo "==> Writing custom.toml (hostname, user, SSH$([ -n "$WIFI_SSID" ] && echo ", WiFi")...)..."
 
-echo "==> Configuring pi user..."
-PI_PASS_HASH=$(openssl passwd -6 "$PI_PASS")
-echo "pi:${PI_PASS_HASH}" > "$BOOT_MNT/userconf.txt"
-
-echo "==> Setting hostname to '$HOSTNAME'..."
-echo "$HOSTNAME" > "$ROOT_MNT/etc/hostname"
-sed -i "s/raspberrypi/$HOSTNAME/g" "$ROOT_MNT/etc/hosts"
-
-# Configure WiFi — written directly into the image so it's live before firstrun.
-# Writes both NetworkManager keyfile (Pi OS Bookworm) and wpa_supplicant.conf
-# (Pi OS Bullseye and earlier) for compatibility.
+WIFI_SECTION=""
 if [ -n "$WIFI_SSID" ]; then
-    echo "==> Configuring WiFi ($WIFI_SSID)..."
+    WIFI_SECTION="
+[wlan]
+ssid = \"${WIFI_SSID}\"
+password = \"${WIFI_PASS}\"
+password_encrypted = false
+hidden = false
+country = \"GB\""
+fi
 
-    # NetworkManager keyfile (Bookworm)
+cat > "$BOOT_MNT/custom.toml" << EOF
+config_version = 1
+
+[system]
+hostname = "${HOSTNAME}"
+
+[user]
+name = "pi"
+password = "${PI_PASS}"
+password_encrypted = false
+
+[ssh]
+enabled = true
+password_authentication = true
+${WIFI_SECTION}
+[locale]
+keymap = "gb"
+timezone = "Europe/London"
+EOF
+
+# Also write a NetworkManager keyfile directly into the rootfs as a fallback
+# for WiFi — custom.toml WiFi can be unreliable on some Bookworm builds.
+if [ -n "$WIFI_SSID" ]; then
     NM_DIR="$ROOT_MNT/etc/NetworkManager/system-connections"
     mkdir -p "$NM_DIR"
     cat > "$NM_DIR/${WIFI_SSID}.nmconnection" << EOF
@@ -182,18 +202,6 @@ addr-gen-mode=default
 method=auto
 EOF
     chmod 600 "$NM_DIR/${WIFI_SSID}.nmconnection"
-
-    # wpa_supplicant.conf on boot partition (Bullseye and earlier)
-    cat > "$BOOT_MNT/wpa_supplicant.conf" << EOF
-country=GB
-ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
-update_config=1
-
-network={
-    ssid="${WIFI_SSID}"
-    psk="${WIFI_PASS}"
-}
-EOF
 fi
 
 echo "==> Copying Freezr application..."
