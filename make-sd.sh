@@ -198,6 +198,11 @@ step "Boot: $PART1  Root: $PART2"
 # ── Headless config ───────────────────────────────────────────────────────────
 header "Writing headless configuration"
 
+# custom.toml is the Pi OS Bookworm headless config format. It is processed by
+# /usr/lib/raspberrypi-sys-mods/firstboot on first boot, which handles user
+# creation, SSH, hostname, locale, and WiFi (including setting the country code
+# so rfkill doesn't block the radio). We must also add init=firstboot to
+# cmdline.txt — without it, custom.toml is never read at all.
 WIFI_SECTION=""
 if [ -n "$WIFI_SSID" ]; then
     WIFI_SECTION="
@@ -230,37 +235,17 @@ keymap = "gb"
 timezone = "Europe/London"
 EOF
 
-touch "$BOOT_MNT/ssh"
-step "custom.toml written (hostname, user, SSH$([ -n "$WIFI_SSID" ] && echo ", WiFi"))"
-
-if [ -n "$WIFI_SSID" ]; then
-    NM_DIR="$ROOT_MNT/etc/NetworkManager/system-connections"
-    mkdir -p "$NM_DIR"
-    cat > "$NM_DIR/${WIFI_SSID}.nmconnection" << EOF
-[connection]
-id=${WIFI_SSID}
-type=wifi
-autoconnect=true
-
-[wifi]
-mode=infrastructure
-ssid=${WIFI_SSID}
-
-[wifi-security]
-auth-alg=open
-key-mgmt=wpa-psk
-psk=${WIFI_PASS}
-
-[ipv4]
-method=auto
-
-[ipv6]
-addr-gen-mode=default
-method=auto
-EOF
-    chmod 600 "$NM_DIR/${WIFI_SSID}.nmconnection"
-    step "NetworkManager keyfile written (WiFi fallback)"
+# Trigger firstboot to process custom.toml on first power-on.
+# Append to the existing cmdline — it must remain a single line.
+CMDLINE=$(cat "$BOOT_MNT/cmdline.txt")
+if ! echo "$CMDLINE" | grep -q "init=/usr/lib/raspberrypi-sys-mods/firstboot"; then
+    echo "$CMDLINE init=/usr/lib/raspberrypi-sys-mods/firstboot" > "$BOOT_MNT/cmdline.txt"
 fi
+
+# Belt-and-braces: legacy ssh file still triggers sshswitch.service on Bookworm
+touch "$BOOT_MNT/ssh"
+
+step "custom.toml + cmdline.txt written (hostname, user, SSH$([ -n "$WIFI_SSID" ] && echo ", WiFi"))"
 
 # ── Copy app ──────────────────────────────────────────────────────────────────
 header "Copying Freezr application"
