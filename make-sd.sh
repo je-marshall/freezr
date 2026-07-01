@@ -241,6 +241,9 @@ users:
     plain_text_passwd: "${PI_PASS}"
 
 ssh_pwauth: true
+
+runcmd:
+  - [ systemctl, enable, --now, ssh ]
 EOF
 
     # network-config: netplan format; cloud-init applies this before NM starts,
