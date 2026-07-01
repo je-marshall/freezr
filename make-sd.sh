@@ -90,15 +90,9 @@ if [ ! -b "$DEVICE" ]; then
 fi
 
 if [ "$BAKE" = "1" ]; then
-    QEMU_BIN=$(command -v qemu-arm-static 2>/dev/null || true)
-    if [ -z "$QEMU_BIN" ]; then
-        echo "Error: --bake requires qemu-arm-static."
+    if ! command -v qemu-arm-static &>/dev/null && ! command -v qemu-aarch64-static &>/dev/null; then
+        echo "Error: --bake requires qemu-user-static."
         echo "  sudo dnf install qemu-user-static"
-        exit 1
-    fi
-    if [ ! -f /proc/sys/fs/binfmt_misc/qemu-arm ]; then
-        echo "Error: binfmt_misc ARM handler not registered."
-        echo "  sudo systemctl restart systemd-binfmt"
         exit 1
     fi
 fi
@@ -153,7 +147,7 @@ cleanup() {
     umount "$ROOT_MNT/dev"     2>/dev/null || true
     umount "$ROOT_MNT/sys"     2>/dev/null || true
     umount "$ROOT_MNT/proc"    2>/dev/null || true
-    rm -f "$ROOT_MNT/usr/bin/qemu-arm-static"
+    rm -f "$ROOT_MNT/usr/bin/qemu-arm-static" "$ROOT_MNT/usr/bin/qemu-aarch64-static"
     [ -f "$ROOT_MNT/etc/resolv.conf.bak" ] && \
         mv "$ROOT_MNT/etc/resolv.conf.bak" "$ROOT_MNT/etc/resolv.conf"
     umount "$BOOT_MNT" 2>/dev/null || true
@@ -243,8 +237,38 @@ rsync -a --exclude='venv' --exclude='instance' --exclude='__pycache__' \
 chown -R 1000:1000 "$ROOT_MNT/home/pi/freezr"
 
 if [ "$BAKE" = "1" ]; then
-    echo "==> Setting up QEMU ARM chroot..."
-    cp "$QEMU_BIN" "$ROOT_MNT/usr/bin/qemu-arm-static"
+    echo "==> Detecting rootfs architecture..."
+    # Read ELF machine type from a known binary in the rootfs
+    ELF_MACHINE=$(od -An -tx1 -j18 -N2 "$ROOT_MNT/bin/ls" 2>/dev/null | tr -d ' \n' || true)
+    case "$ELF_MACHINE" in
+        2800)  # ARM (little-endian, e_machine=0x28)
+            QEMU_BIN=$(command -v qemu-arm-static 2>/dev/null || true)
+            QEMU_DEST="$ROOT_MNT/usr/bin/qemu-arm-static"
+            BINFMT_ENTRY="/proc/sys/fs/binfmt_misc/qemu-arm"
+            ;;
+        b700)  # AArch64 (little-endian, e_machine=0xb7)
+            QEMU_BIN=$(command -v qemu-aarch64-static 2>/dev/null || true)
+            QEMU_DEST="$ROOT_MNT/usr/bin/qemu-aarch64-static"
+            BINFMT_ENTRY="/proc/sys/fs/binfmt_misc/qemu-aarch64"
+            ;;
+        *)
+            echo "Error: could not detect rootfs architecture (ELF machine: $ELF_MACHINE)."
+            exit 1
+            ;;
+    esac
+    if [ -z "$QEMU_BIN" ]; then
+        echo "Error: required QEMU binary not found for this image's architecture."
+        echo "  sudo dnf install qemu-user-static"
+        exit 1
+    fi
+    if [ ! -f "$BINFMT_ENTRY" ]; then
+        echo "Error: binfmt_misc handler not registered for this architecture."
+        echo "  sudo systemctl restart systemd-binfmt"
+        exit 1
+    fi
+
+    echo "==> Setting up QEMU chroot ($(basename "$QEMU_BIN"))..."
+    cp "$QEMU_BIN" "$QEMU_DEST"
     cp /etc/resolv.conf "$ROOT_MNT/etc/resolv.conf.bak" 2>/dev/null || true
     cp /etc/resolv.conf "$ROOT_MNT/etc/resolv.conf"
     mount --bind /proc    "$ROOT_MNT/proc"
