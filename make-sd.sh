@@ -1,52 +1,64 @@
 #!/bin/bash
 # make-sd.sh — Prepares a Raspberry Pi SD card with Freezr pre-configured.
 #
-# Usage: sudo ./make-sd.sh <image.img> <device> [--ssid <name> --pass <password>]
-#   e.g. sudo ./make-sd.sh raspios-lite.img /dev/sdb
-#        sudo ./make-sd.sh raspios-lite.img /dev/sdb --ssid MyWifi --pass secret123
-#
-# Accepts .img, .img.xz, or .tar.xz (as downloaded from raspberrypi.com).
-#
-# On first boot the Pi will:
-#   1. Connect to WiFi (if --ssid provided), or use ethernet
-#   2. Install dependencies via apt
-#   3. Set up the venv and install Freezr
-#   4. Initialise the database (password written to /home/pi/freezr-setup.log)
-#   5. Start the freezr systemd service on port 8000
-# First boot takes ~5 minutes. After that Freezr is available at http://<pi-ip>:8000
+# Usage: sudo ./make-sd.sh <image.img> <device> [options]
+# Run with -h for full help.
 
 set -e
 
 APP_DIR=$(cd "$(dirname "$0")" && pwd)
 
+# ── Colour helpers ────────────────────────────────────────────────────────────
+BOLD='\033[1m'
+DIM='\033[2m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+RED='\033[0;31m'
+CYAN='\033[0;36m'
+RESET='\033[0m'
+
+header() { echo -e "\n${BOLD}${CYAN}▶ $1${RESET}"; }
+step()   { echo -e "  ${GREEN}✓${RESET} $1"; }
+info()   { echo -e "  ${DIM}$1${RESET}"; }
+warn()   { echo -e "  ${YELLOW}⚠ $1${RESET}"; }
+err()    { echo -e "\n  ${RED}✗ $1${RESET}\n"; }
+
+# ── Usage ─────────────────────────────────────────────────────────────────────
 usage() {
     cat << EOF
-Usage: sudo $0 <image> <device> [options]
 
-Arguments:
+${BOLD}make-sd.sh${RESET} — Flash a Raspberry Pi SD card with Freezr pre-installed
+
+${BOLD}USAGE${RESET}
+  sudo $0 <image> <device> [options]
+
+${BOLD}ARGUMENTS${RESET}
   <image>     Pi OS image file (.img, .img.xz, or .tar.xz)
   <device>    SD card block device (e.g. /dev/sdb, /dev/mmcblk0)
 
-Options:
-  --hostname  Hostname for the Pi (default: freezr, accessible as freezr.local)
-  --pi-pass   Password for the pi user (default: raspberry) — change this!
+${BOLD}OPTIONS${RESET}
+  --hostname  Hostname for the Pi          (default: freezr → freezr.local)
+  --pi-pass   Password for the pi user     (default: raspberry — change this!)
   --ssid      WiFi network name
-  --pass      WiFi password (required if --ssid is set)
-  --bake      Install Freezr into the image now via QEMU chroot — first boot
-              goes straight to a running service, no wait. Requires
-              qemu-user-static: sudo dnf install qemu-user-static
+  --pass      WiFi password                (required if --ssid is set)
+  --bake      Install Freezr now via QEMU chroot — first boot goes straight
+              to a running service with no wait. Requires qemu-user-static:
+                sudo dnf install qemu-user-static
   -h, --help  Show this help
 
-Examples:
-  sudo $0 raspios-bookworm-arm64-lite.img.xz /dev/sdb                               # Pi 3/4/5
-  sudo $0 raspios-bookworm-armhf-lite.img.xz /dev/sdb --ssid MyWifi --pass x --bake # Pi Zero W
+${BOLD}EXAMPLES${RESET}
+  sudo $0 raspios-bookworm-arm64-lite.img.xz /dev/sdb
+  sudo $0 raspios-bookworm-armhf-lite.img.xz /dev/sdb --ssid MyWifi --pass x --bake
 
-Note: Pi Zero / Zero W requires the 32-bit armhf image (Bookworm or earlier).
-      Trixie (2025+) has dropped ARMv6 support. Use --bake to avoid the
-      20-30 min first-boot compile wait on the Zero W.
+${BOLD}NOTE${RESET}
+  Pi Zero / Zero W requires the 32-bit armhf image (Bookworm or earlier).
+  Trixie (2025+) dropped ARMv6. Use --bake to avoid the 20-30 min first-boot
+  compile wait on the Zero W.
+
 EOF
 }
 
+# ── Argument parsing ───────────────────────────────────────────────────────────
 POSITIONAL=()
 WIFI_SSID=""
 WIFI_PASS=""
@@ -62,7 +74,7 @@ while [[ $# -gt 0 ]]; do
         --ssid)        WIFI_SSID="$2"; shift 2 ;;
         --pass)        WIFI_PASS="$2"; shift 2 ;;
         --bake)        BAKE=1; shift ;;
-        -*)            echo "Unknown option: $1"; echo; usage; exit 1 ;;
+        -*)            err "Unknown option: $1"; usage; exit 1 ;;
         *)             POSITIONAL+=("$1"); shift ;;
     esac
 done
@@ -70,52 +82,61 @@ done
 IMAGE=${POSITIONAL[0]:-}
 DEVICE=${POSITIONAL[1]:-}
 
+# ── Validation ────────────────────────────────────────────────────────────────
 if [ -z "$IMAGE" ] || [ -z "$DEVICE" ]; then
     usage; exit 1
 fi
 
 if [ -n "$WIFI_SSID" ] && [ -z "$WIFI_PASS" ]; then
-    echo "Error: --pass is required when --ssid is set."
-    exit 1
+    err "--pass is required when --ssid is set."; exit 1
 fi
 
 if [ ! -f "$IMAGE" ]; then
-    echo "Error: image file '$IMAGE' not found."
-    exit 1
+    err "Image file '$IMAGE' not found."; exit 1
 fi
 
 if [ ! -b "$DEVICE" ]; then
-    echo "Error: '$DEVICE' is not a block device."
-    exit 1
+    err "'$DEVICE' is not a block device."; exit 1
 fi
 
 if [ "$BAKE" = "1" ]; then
     if ! command -v qemu-arm-static &>/dev/null && ! command -v qemu-aarch64-static &>/dev/null; then
-        echo "Error: --bake requires qemu-user-static."
-        echo "  sudo dnf install qemu-user-static"
+        err "--bake requires qemu-user-static.\n    sudo dnf install qemu-user-static"
         exit 1
     fi
 fi
 
-# Warn but don't bail on common system drive names — SD card adapters often show up as sda
+# ── Plan summary ──────────────────────────────────────────────────────────────
+echo -e "\n${BOLD}┌─────────────────────────────────────────┐${RESET}"
+echo -e "${BOLD}│           Freezr SD Card Setup          │${RESET}"
+echo -e "${BOLD}└─────────────────────────────────────────┘${RESET}"
+echo -e "  Image    : ${DIM}$(basename "$IMAGE")${RESET}"
+echo -e "  Device   : ${DIM}$DEVICE${RESET}"
+echo -e "  Hostname : ${DIM}${HOSTNAME}.local${RESET}"
+[ -n "$WIFI_SSID" ] && echo -e "  WiFi     : ${DIM}$WIFI_SSID${RESET}"
+[ "$BAKE" = "1" ]   && echo -e "  Mode     : ${DIM}bake (QEMU chroot install)${RESET}" \
+                     || echo -e "  Mode     : ${DIM}first-boot install${RESET}"
+
 if echo "$DEVICE" | grep -qE '^/dev/(sda|nvme0n1|mmcblk0)$'; then
-    echo "Warning: '$DEVICE' is a name commonly used by system drives."
-    read -p "    Are you sure this is your SD card and not your system disk? [y/N] " syscheck
+    echo ""
+    warn "'$DEVICE' is a name commonly used by system drives."
+    read -p "    Sure this is your SD card? [y/N] " syscheck
     [ "$syscheck" = "y" ] || { echo "Aborted."; exit 1; }
 fi
 
-echo "==> Flashing $IMAGE to $DEVICE (this will erase $DEVICE)..."
-[ -n "$WIFI_SSID" ] && echo "    WiFi: $WIFI_SSID"
-read -p "    Are you sure? [y/N] " confirm
+echo ""
+read -p "  This will ERASE $DEVICE. Continue? [y/N] " confirm
 [ "$confirm" = "y" ] || { echo "Aborted."; exit 1; }
 
+# ── Flash ─────────────────────────────────────────────────────────────────────
+header "Flashing image"
 case "$IMAGE" in
     *.tar.xz)
-        echo "    (extracting .tar.xz on the fly)"
+        info "Extracting .tar.xz on the fly..."
         tar xJOf "$IMAGE" '*.img' | dd of="$DEVICE" bs=4M status=progress conv=fsync
         ;;
     *.xz)
-        echo "    (decompressing .xz on the fly)"
+        info "Decompressing .xz on the fly..."
         xz -dc "$IMAGE" | dd of="$DEVICE" bs=4M status=progress conv=fsync
         ;;
     *)
@@ -123,8 +144,11 @@ case "$IMAGE" in
         ;;
 esac
 sync
+step "Flash complete"
 
-# Determine partition naming (e.g. /dev/sdb1 vs /dev/mmcblk1p1)
+# ── Mount ─────────────────────────────────────────────────────────────────────
+header "Mounting partitions"
+
 if echo "$DEVICE" | grep -q "mmcblk\|nvme"; then
     PART1="${DEVICE}p1"
     PART2="${DEVICE}p2"
@@ -133,7 +157,6 @@ else
     PART2="${DEVICE}2"
 fi
 
-# Wait for kernel to re-read partition table
 sleep 2
 partprobe "$DEVICE" 2>/dev/null || true
 sleep 1
@@ -142,7 +165,6 @@ BOOT_MNT=$(mktemp -d)
 ROOT_MNT=$(mktemp -d)
 
 cleanup() {
-    # Tear down chroot bind mounts before unmounting the root partition
     umount "$ROOT_MNT/dev/pts" 2>/dev/null || true
     umount "$ROOT_MNT/dev"     2>/dev/null || true
     umount "$ROOT_MNT/sys"     2>/dev/null || true
@@ -156,13 +178,12 @@ cleanup() {
 }
 trap cleanup EXIT
 
-echo "==> Mounting partitions..."
 mount "$PART1" "$BOOT_MNT"
 mount "$PART2" "$ROOT_MNT"
+step "Boot: $PART1  Root: $PART2"
 
-# Write custom.toml — the Pi OS Bookworm way to configure hostname, user,
-# SSH, and WiFi headlessly from the boot partition in one file.
-echo "==> Writing custom.toml (hostname, user, SSH$([ -n "$WIFI_SSID" ] && echo ", WiFi")...)..."
+# ── Headless config ───────────────────────────────────────────────────────────
+header "Writing headless configuration"
 
 WIFI_SECTION=""
 if [ -n "$WIFI_SSID" ]; then
@@ -196,11 +217,9 @@ keymap = "gb"
 timezone = "Europe/London"
 EOF
 
-# Belt and braces: legacy ssh file still works on Bookworm and costs nothing
 touch "$BOOT_MNT/ssh"
+step "custom.toml written (hostname, user, SSH$([ -n "$WIFI_SSID" ] && echo ", WiFi"))"
 
-# Also write a NetworkManager keyfile directly into the rootfs as a fallback
-# for WiFi — custom.toml WiFi can be unreliable on some Bookworm builds.
 if [ -n "$WIFI_SSID" ]; then
     NM_DIR="$ROOT_MNT/etc/NetworkManager/system-connections"
     mkdir -p "$NM_DIR"
@@ -227,47 +246,52 @@ addr-gen-mode=default
 method=auto
 EOF
     chmod 600 "$NM_DIR/${WIFI_SSID}.nmconnection"
+    step "NetworkManager keyfile written (WiFi fallback)"
 fi
 
-echo "==> Copying Freezr application..."
+# ── Copy app ──────────────────────────────────────────────────────────────────
+header "Copying Freezr application"
 mkdir -p "$ROOT_MNT/home/pi/freezr"
 rsync -a --exclude='venv' --exclude='instance' --exclude='__pycache__' \
     --exclude='*.pyc' --exclude='.git' \
     "$APP_DIR/" "$ROOT_MNT/home/pi/freezr/"
 chown -R 1000:1000 "$ROOT_MNT/home/pi/freezr"
+step "Copied to /home/pi/freezr"
 
+# ── Bake or first-boot ────────────────────────────────────────────────────────
 if [ "$BAKE" = "1" ]; then
-    echo "==> Detecting rootfs architecture..."
-    # Read ELF machine type from a known binary in the rootfs
+
+    header "Detecting image architecture"
     ELF_MACHINE=$(od -An -tx1 -j18 -N2 "$ROOT_MNT/bin/ls" 2>/dev/null | tr -d ' \n' || true)
     case "$ELF_MACHINE" in
-        2800)  # ARM (little-endian, e_machine=0x28)
+        2800)
             QEMU_BIN=$(command -v qemu-arm-static 2>/dev/null || true)
             QEMU_DEST="$ROOT_MNT/usr/bin/qemu-arm-static"
             BINFMT_ENTRY="/proc/sys/fs/binfmt_misc/qemu-arm"
+            ARCH_NAME="ARMv6/7 (armhf)"
             ;;
-        b700)  # AArch64 (little-endian, e_machine=0xb7)
+        b700)
             QEMU_BIN=$(command -v qemu-aarch64-static 2>/dev/null || true)
             QEMU_DEST="$ROOT_MNT/usr/bin/qemu-aarch64-static"
             BINFMT_ENTRY="/proc/sys/fs/binfmt_misc/qemu-aarch64"
+            ARCH_NAME="AArch64 (arm64)"
             ;;
         *)
-            echo "Error: could not detect rootfs architecture (ELF machine: $ELF_MACHINE)."
+            err "Could not detect rootfs architecture (ELF machine: $ELF_MACHINE)."
             exit 1
             ;;
     esac
     if [ -z "$QEMU_BIN" ]; then
-        echo "Error: required QEMU binary not found for this image's architecture."
-        echo "  sudo dnf install qemu-user-static"
+        err "Required QEMU binary not found for $ARCH_NAME.\n    sudo dnf install qemu-user-static"
         exit 1
     fi
     if [ ! -f "$BINFMT_ENTRY" ]; then
-        echo "Error: binfmt_misc handler not registered for this architecture."
-        echo "  sudo systemctl restart systemd-binfmt"
+        err "binfmt_misc handler not registered for $ARCH_NAME.\n    sudo systemctl restart systemd-binfmt"
         exit 1
     fi
+    step "Detected $ARCH_NAME → $(basename "$QEMU_BIN")"
 
-    echo "==> Setting up QEMU chroot ($(basename "$QEMU_BIN"))..."
+    header "Setting up QEMU chroot"
     cp "$QEMU_BIN" "$QEMU_DEST"
     cp /etc/resolv.conf "$ROOT_MNT/etc/resolv.conf.bak" 2>/dev/null || true
     cp /etc/resolv.conf "$ROOT_MNT/etc/resolv.conf"
@@ -275,8 +299,10 @@ if [ "$BAKE" = "1" ]; then
     mount --bind /sys     "$ROOT_MNT/sys"
     mount --bind /dev     "$ROOT_MNT/dev"
     mount --bind /dev/pts "$ROOT_MNT/dev/pts"
+    step "Bind mounts ready"
 
-    echo "==> Installing Freezr in chroot — note the password printed below."
+    header "Installing Freezr (chroot) — this will take a few minutes"
+    info "Note the Freezr password printed below."
     echo ""
     chroot "$ROOT_MNT" /bin/bash << 'CHROOT'
 set -e
@@ -301,7 +327,7 @@ chown -R 1000:1000 /home/pi/freezr
 CHROOT
     echo ""
 
-    # Enable freezr service — can't use systemctl in a chroot, create symlink directly
+    header "Enabling Freezr service"
     sed -e "s|__USER__|pi|g" \
         -e "s|__APP_DIR__|/home/pi/freezr|g" \
         -e "s|__VENV_DIR__|/home/pi/freezr/venv|g" \
@@ -309,14 +335,17 @@ CHROOT
     mkdir -p "$ROOT_MNT/etc/systemd/system/multi-user.target.wants"
     ln -sf /etc/systemd/system/freezr.service \
         "$ROOT_MNT/etc/systemd/system/multi-user.target.wants/freezr.service"
+    step "freezr.service enabled"
 
-    echo "==> Done!"
-    echo ""
-    echo "    Insert the SD card into your Pi and power it on."
-    echo "    Freezr will be available at http://${HOSTNAME}.local:8000 within ~1 minute."
+    echo -e "\n${BOLD}${GREEN}┌─────────────────────────────────────────┐${RESET}"
+    echo -e "${BOLD}${GREEN}│               All done!                 │${RESET}"
+    echo -e "${BOLD}${GREEN}└─────────────────────────────────────────┘${RESET}"
+    echo -e "  Eject the SD card and insert it into your Pi."
+    echo -e "  Freezr will be up at ${BOLD}http://${HOSTNAME}.local:8000${RESET} within ~1 minute."
 
 else
-    echo "==> Writing first-boot setup script and service..."
+
+    header "Writing first-boot installer"
 
     cat > "$ROOT_MNT/opt/freezr-setup.sh" << 'SETUP'
 #!/bin/bash
@@ -376,11 +405,15 @@ SERVICE
     mkdir -p "$ROOT_MNT/etc/systemd/system/multi-user.target.wants"
     ln -sf /etc/systemd/system/freezr-setup.service \
         "$ROOT_MNT/etc/systemd/system/multi-user.target.wants/freezr-setup.service"
+    step "First-boot service installed"
 
-    echo "==> Done!"
-    echo ""
-    echo "    Insert the SD card into your Pi and power it on."
-    echo "    First boot will take 5-25 mins to install (longer on a Zero W)."
-    echo "    The login password will be written to /home/pi/freezr-setup.log on the Pi."
-    echo "    Freezr will be available at http://${HOSTNAME}.local:8000"
+    echo -e "\n${BOLD}${GREEN}┌─────────────────────────────────────────┐${RESET}"
+    echo -e "${BOLD}${GREEN}│               All done!                 │${RESET}"
+    echo -e "${BOLD}${GREEN}└─────────────────────────────────────────┘${RESET}"
+    echo -e "  Eject the SD card and insert it into your Pi."
+    echo -e "  First boot will take ${BOLD}5-25 minutes${RESET} to install (longer on a Zero W)."
+    echo -e "  The Freezr password will be in ${BOLD}/home/pi/freezr-setup.log${RESET} on the Pi."
+    echo -e "  Freezr will be up at ${BOLD}http://${HOSTNAME}.local:8000${RESET}"
+
 fi
+echo ""
