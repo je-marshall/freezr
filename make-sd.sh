@@ -161,10 +161,23 @@ sleep 2
 partprobe "$DEVICE" 2>/dev/null || true
 sleep 1
 
+# For --bake we expand the root partition now so the compile has room.
+# Pi OS normally does this on first boot; we do it here instead.
+if [ "$BAKE" = "1" ]; then
+    header "Expanding root partition"
+    parted -s "$DEVICE" resizepart 2 100%
+    partprobe "$DEVICE" 2>/dev/null || true
+    sleep 1
+    e2fsck -f "$PART2" || true   # returns non-zero even when only fixing minor issues
+    resize2fs "$PART2"
+    step "Root filesystem expanded to fill SD card"
+fi
+
 BOOT_MNT=$(mktemp -d)
 ROOT_MNT=$(mktemp -d)
 
 cleanup() {
+    umount "$ROOT_MNT/tmp"     2>/dev/null || true
     umount "$ROOT_MNT/dev/pts" 2>/dev/null || true
     umount "$ROOT_MNT/dev"     2>/dev/null || true
     umount "$ROOT_MNT/sys"     2>/dev/null || true
@@ -295,10 +308,11 @@ if [ "$BAKE" = "1" ]; then
     cp "$QEMU_BIN" "$QEMU_DEST"
     cp /etc/resolv.conf "$ROOT_MNT/etc/resolv.conf.bak" 2>/dev/null || true
     cp /etc/resolv.conf "$ROOT_MNT/etc/resolv.conf"
-    mount --bind /proc    "$ROOT_MNT/proc"
-    mount --bind /sys     "$ROOT_MNT/sys"
-    mount --bind /dev     "$ROOT_MNT/dev"
-    mount --bind /dev/pts "$ROOT_MNT/dev/pts"
+    mount --bind /proc       "$ROOT_MNT/proc"
+    mount --bind /sys        "$ROOT_MNT/sys"
+    mount --bind /dev        "$ROOT_MNT/dev"
+    mount --bind /dev/pts    "$ROOT_MNT/dev/pts"
+    mount -t tmpfs tmpfs     "$ROOT_MNT/tmp"    # keep gcc intermediates off the SD card
     step "Bind mounts ready"
 
     header "Installing Freezr (chroot) — this will take a few minutes"
