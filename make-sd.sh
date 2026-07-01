@@ -32,15 +32,18 @@ Options:
   --pi-pass   Password for the pi user (default: raspberry) — change this!
   --ssid      WiFi network name
   --pass      WiFi password (required if --ssid is set)
+  --bake      Install Freezr into the image now via QEMU chroot — first boot
+              goes straight to a running service, no wait. Requires
+              qemu-user-static: sudo dnf install qemu-user-static
   -h, --help  Show this help
 
 Examples:
-  sudo $0 raspios-bookworm-arm64-lite.img.xz /dev/sdb                        # Pi 3/4/5
-  sudo $0 raspios-bookworm-armhf-lite.img.xz /dev/sdb --ssid MyWifi --pass x  # Pi Zero W (ARMv6)
+  sudo $0 raspios-bookworm-arm64-lite.img.xz /dev/sdb                               # Pi 3/4/5
+  sudo $0 raspios-bookworm-armhf-lite.img.xz /dev/sdb --ssid MyWifi --pass x --bake # Pi Zero W
 
 Note: Pi Zero / Zero W requires the 32-bit armhf image (Bookworm or earlier).
-      Trixie (2025+) has dropped ARMv6 support. First boot on a Zero W takes
-      ~20-30 mins as some Python packages compile from source.
+      Trixie (2025+) has dropped ARMv6 support. Use --bake to avoid the
+      20-30 min first-boot compile wait on the Zero W.
 EOF
 }
 
@@ -49,6 +52,7 @@ WIFI_SSID=""
 WIFI_PASS=""
 HOSTNAME="freezr"
 PI_PASS="raspberry"
+BAKE=0
 
 while [[ $# -gt 0 ]]; do
     case $1 in
@@ -57,6 +61,7 @@ while [[ $# -gt 0 ]]; do
         --pi-pass)     PI_PASS="$2"; shift 2 ;;
         --ssid)        WIFI_SSID="$2"; shift 2 ;;
         --pass)        WIFI_PASS="$2"; shift 2 ;;
+        --bake)        BAKE=1; shift ;;
         -*)            echo "Unknown option: $1"; echo; usage; exit 1 ;;
         *)             POSITIONAL+=("$1"); shift ;;
     esac
@@ -82,6 +87,20 @@ fi
 if [ ! -b "$DEVICE" ]; then
     echo "Error: '$DEVICE' is not a block device."
     exit 1
+fi
+
+if [ "$BAKE" = "1" ]; then
+    QEMU_BIN=$(command -v qemu-arm-static 2>/dev/null || true)
+    if [ -z "$QEMU_BIN" ]; then
+        echo "Error: --bake requires qemu-arm-static."
+        echo "  sudo dnf install qemu-user-static"
+        exit 1
+    fi
+    if [ ! -f /proc/sys/fs/binfmt_misc/qemu-arm ]; then
+        echo "Error: binfmt_misc ARM handler not registered."
+        echo "  sudo systemctl restart systemd-binfmt"
+        exit 1
+    fi
 fi
 
 # Warn but don't bail on common system drive names — SD card adapters often show up as sda
@@ -129,6 +148,14 @@ BOOT_MNT=$(mktemp -d)
 ROOT_MNT=$(mktemp -d)
 
 cleanup() {
+    # Tear down chroot bind mounts before unmounting the root partition
+    umount "$ROOT_MNT/dev/pts" 2>/dev/null || true
+    umount "$ROOT_MNT/dev"     2>/dev/null || true
+    umount "$ROOT_MNT/sys"     2>/dev/null || true
+    umount "$ROOT_MNT/proc"    2>/dev/null || true
+    rm -f "$ROOT_MNT/usr/bin/qemu-arm-static"
+    [ -f "$ROOT_MNT/etc/resolv.conf.bak" ] && \
+        mv "$ROOT_MNT/etc/resolv.conf.bak" "$ROOT_MNT/etc/resolv.conf"
     umount "$BOOT_MNT" 2>/dev/null || true
     umount "$ROOT_MNT" 2>/dev/null || true
     rmdir "$BOOT_MNT" "$ROOT_MNT" 2>/dev/null || true
@@ -215,17 +242,66 @@ rsync -a --exclude='venv' --exclude='instance' --exclude='__pycache__' \
     "$APP_DIR/" "$ROOT_MNT/home/pi/freezr/"
 chown -R 1000:1000 "$ROOT_MNT/home/pi/freezr"
 
-echo "==> Writing first-boot setup script and service..."
+if [ "$BAKE" = "1" ]; then
+    echo "==> Setting up QEMU ARM chroot..."
+    cp "$QEMU_BIN" "$ROOT_MNT/usr/bin/qemu-arm-static"
+    cp /etc/resolv.conf "$ROOT_MNT/etc/resolv.conf.bak" 2>/dev/null || true
+    cp /etc/resolv.conf "$ROOT_MNT/etc/resolv.conf"
+    mount --bind /proc    "$ROOT_MNT/proc"
+    mount --bind /sys     "$ROOT_MNT/sys"
+    mount --bind /dev     "$ROOT_MNT/dev"
+    mount --bind /dev/pts "$ROOT_MNT/dev/pts"
 
-# Write the setup script to the rootfs
-cat > "$ROOT_MNT/opt/freezr-setup.sh" << 'SETUP'
+    echo "==> Installing Freezr in chroot — note the password printed below."
+    echo ""
+    chroot "$ROOT_MNT" /bin/bash << 'CHROOT'
+set -e
+export DEBIAN_FRONTEND=noninteractive
+export FLASK_APP=freezr
+
+apt-get update -y
+apt-get install -y \
+    python3-venv python3-dev python3-pip \
+    gcc sqlite3 \
+    libusb-1.0-0-dev libjpeg-dev zlib1g-dev libfreetype6-dev
+
+usermod -a -G lp,plugdev pi
+
+cd /home/pi/freezr
+python3 -m venv venv
+venv/bin/pip install --upgrade pip wheel
+venv/bin/pip install -e .
+venv/bin/flask init-db
+
+chown -R 1000:1000 /home/pi/freezr
+CHROOT
+    echo ""
+
+    # Enable freezr service — can't use systemctl in a chroot, create symlink directly
+    sed -e "s|__USER__|pi|g" \
+        -e "s|__APP_DIR__|/home/pi/freezr|g" \
+        -e "s|__VENV_DIR__|/home/pi/freezr/venv|g" \
+        "$ROOT_MNT/home/pi/freezr/freezr.service" > "$ROOT_MNT/etc/systemd/system/freezr.service"
+    mkdir -p "$ROOT_MNT/etc/systemd/system/multi-user.target.wants"
+    ln -sf /etc/systemd/system/freezr.service \
+        "$ROOT_MNT/etc/systemd/system/multi-user.target.wants/freezr.service"
+
+    echo "==> Done!"
+    echo ""
+    echo "    Insert the SD card into your Pi and power it on."
+    echo "    Freezr will be available at http://${HOSTNAME}.local:8000 within ~1 minute."
+
+else
+    echo "==> Writing first-boot setup script and service..."
+
+    cat > "$ROOT_MNT/opt/freezr-setup.sh" << 'SETUP'
 #!/bin/bash
 set -e
 
 apt-get update -y
 apt-get install -y \
     python3-venv python3-dev python3-pip \
-    gcc git sqlite3 \
+    gcc sqlite3 \
     libusb-1.0-0-dev libjpeg-dev zlib1g-dev libfreetype6-dev
 
 usermod -a -G lp,plugdev pi
@@ -253,10 +329,9 @@ rm -f /opt/freezr-setup.sh
 echo "=== Freezr setup complete. ==="
 SETUP
 
-chmod +x "$ROOT_MNT/opt/freezr-setup.sh"
+    chmod +x "$ROOT_MNT/opt/freezr-setup.sh"
 
-# Write a systemd service that runs the script once on first boot
-cat > "$ROOT_MNT/etc/systemd/system/freezr-setup.service" << 'SERVICE'
+    cat > "$ROOT_MNT/etc/systemd/system/freezr-setup.service" << 'SERVICE'
 [Unit]
 Description=Freezr First Boot Setup
 After=network-online.target
@@ -274,14 +349,14 @@ TimeoutStartSec=1800
 WantedBy=multi-user.target
 SERVICE
 
-# Enable the service
-mkdir -p "$ROOT_MNT/etc/systemd/system/multi-user.target.wants"
-ln -sf /etc/systemd/system/freezr-setup.service \
-    "$ROOT_MNT/etc/systemd/system/multi-user.target.wants/freezr-setup.service"
+    mkdir -p "$ROOT_MNT/etc/systemd/system/multi-user.target.wants"
+    ln -sf /etc/systemd/system/freezr-setup.service \
+        "$ROOT_MNT/etc/systemd/system/multi-user.target.wants/freezr-setup.service"
 
-echo "==> Done!"
-echo ""
-echo "    Insert the SD card into your Pi and power it on."
-echo "    First boot will take ~5 minutes to install everything."
-echo "    The login password will be written to /home/pi/freezr-setup.log on the Pi."
-echo "    Freezr will be available at http://${HOSTNAME}.local:8000"
+    echo "==> Done!"
+    echo ""
+    echo "    Insert the SD card into your Pi and power it on."
+    echo "    First boot will take 5-25 mins to install (longer on a Zero W)."
+    echo "    The login password will be written to /home/pi/freezr-setup.log on the Pi."
+    echo "    Freezr will be available at http://${HOSTNAME}.local:8000"
+fi
