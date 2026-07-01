@@ -197,22 +197,93 @@ step "Boot: $PART1  Root: $PART2"
 # ── Headless config ───────────────────────────────────────────────────────────
 header "Writing headless configuration"
 
-# custom.toml is processed by /usr/lib/raspberrypi-sys-mods/firstboot on first
-# boot — it handles user, SSH, hostname, locale, and WiFi (including setting the
-# country code so rfkill doesn't block the radio). We add init=firstboot to
-# cmdline.txt to trigger it; without that line custom.toml is never read.
-WIFI_SECTION=""
-if [ -n "$WIFI_SSID" ]; then
-    WIFI_SECTION="
+# Pi OS has two different headless config mechanisms depending on the version:
+#   - Newer images (Trixie / late Bookworm): cloud-init reads user-data,
+#     network-config, and meta-data from the boot partition (NoCloud datasource)
+#   - Older images (Bookworm): firstboot binary processes custom.toml; we must
+#     add init=firstboot to cmdline.txt to trigger it
+if [ ! -f "$ROOT_MNT/usr/lib/raspberrypi-sys-mods/firstboot" ] && \
+   [ -f "$BOOT_MNT/user-data" ]; then
+
+    info "Detected cloud-init Pi OS — writing user-data + network-config"
+
+    # user-data: hostname, user, SSH, locale
+    cat > "$BOOT_MNT/user-data" << EOF
+#cloud-config
+hostname: ${HOSTNAME}
+manage_etc_hosts: true
+timezone: Europe/London
+keyboard:
+  layout: gb
+
+users:
+  - name: pi
+    gecos: Pi User
+    groups: [adm, dialout, cdrom, sudo, audio, video, plugdev, games, users,
+             input, netdev, spi, i2c, gpio, lp]
+    sudo: ALL=(ALL) NOPASSWD:ALL
+    shell: /bin/bash
+    lock_passwd: false
+    plain_text_passwd: "${PI_PASS}"
+
+ssh_pwauth: true
+EOF
+
+    # network-config: netplan format; cloud-init applies this before NM starts,
+    # so the regulatory-domain is set correctly and rfkill doesn't block WiFi
+    if [ -n "$WIFI_SSID" ]; then
+        cat > "$BOOT_MNT/network-config" << EOF
+network:
+  version: 2
+  ethernets:
+    eth0:
+      dhcp4: true
+      optional: true
+  wifis:
+    wlan0:
+      dhcp4: true
+      optional: true
+      regulatory-domain: GB
+      access-points:
+        "${WIFI_SSID}":
+          password: "${WIFI_PASS}"
+EOF
+    else
+        cat > "$BOOT_MNT/network-config" << EOF
+network:
+  version: 2
+  ethernets:
+    eth0:
+      dhcp4: true
+      optional: true
+EOF
+    fi
+
+    # Changing instance_id ensures cloud-init treats this as a fresh instance
+    # and re-runs even if the card was previously used
+    cat > "$BOOT_MNT/meta-data" << EOF
+instance_id: freezr-$(date +%s)
+dsmode: local
+EOF
+
+    step "cloud-init files written (hostname, user, SSH$([ -n "$WIFI_SSID" ] && echo ", WiFi"))"
+
+else
+
+    info "Detected firstboot Pi OS — writing custom.toml"
+
+    WIFI_SECTION=""
+    if [ -n "$WIFI_SSID" ]; then
+        WIFI_SECTION="
 [wlan]
 ssid = \"${WIFI_SSID}\"
 password = \"${WIFI_PASS}\"
 password_encrypted = false
 hidden = false
 country = \"GB\""
-fi
+    fi
 
-cat > "$BOOT_MNT/custom.toml" << EOF
+    cat > "$BOOT_MNT/custom.toml" << EOF
 config_version = 1
 
 [system]
@@ -233,13 +304,17 @@ keymap = "gb"
 timezone = "Europe/London"
 EOF
 
-CMDLINE=$(cat "$BOOT_MNT/cmdline.txt")
-if ! echo "$CMDLINE" | grep -q "init=/usr/lib/raspberrypi-sys-mods/firstboot"; then
-    echo "$CMDLINE init=/usr/lib/raspberrypi-sys-mods/firstboot" > "$BOOT_MNT/cmdline.txt"
+    CMDLINE=$(cat "$BOOT_MNT/cmdline.txt")
+    if ! echo "$CMDLINE" | grep -q "init=/usr/lib/raspberrypi-sys-mods/firstboot"; then
+        echo "$CMDLINE init=/usr/lib/raspberrypi-sys-mods/firstboot" > "$BOOT_MNT/cmdline.txt"
+    fi
+
+    step "custom.toml + cmdline.txt written (hostname, user, SSH$([ -n "$WIFI_SSID" ] && echo ", WiFi"))"
+
 fi
 
+# sshswitch.service enables SSH when this file is present on the boot partition
 touch "$BOOT_MNT/ssh"
-step "custom.toml + cmdline.txt written (hostname, user, SSH$([ -n "$WIFI_SSID" ] && echo ", WiFi"))"
 
 # ── Copy app ──────────────────────────────────────────────────────────────────
 header "Copying Freezr application"
@@ -422,11 +497,11 @@ echo -e "${BOLD}${GREEN}│               All done!                 │${RESET}"
 echo -e "${BOLD}${GREEN}└─────────────────────────────────────────┘${RESET}"
 if [ "$BAKE" = "1" ]; then
     echo -e "  Eject the SD card and insert it into your Pi."
-    echo -e "  Freezr will be up at ${BOLD}http://${HOSTNAME}.local:8000${RESET} within ~1 minute."
+    echo -e "  Freezr will be up at ${BOLD}http://${HOSTNAME}.local:8000${RESET} once it has booted."
 else
     echo -e "  Eject the SD card and insert it into your Pi."
     echo -e "  First boot will take ${BOLD}5-25 minutes${RESET} to install (longer on a Zero W)."
     echo -e "  The Freezr password will be in ${BOLD}/home/pi/freezr-setup.log${RESET} on the Pi."
-    echo -e "  Freezr will be up at ${BOLD}http://${HOSTNAME}.local:8000${RESET}"
+    echo -e "  Freezr will be up at ${BOLD}http://${HOSTNAME}.local:8000${RESET} after that."
 fi
 echo ""
