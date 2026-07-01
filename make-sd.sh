@@ -128,51 +128,41 @@ echo ""
 read -p "  This will ERASE $DEVICE. Continue? [y/N] " confirm
 [ "$confirm" = "y" ] || { echo "Aborted."; exit 1; }
 
-# ── Flash ─────────────────────────────────────────────────────────────────────
-header "Flashing image"
+# ── Prepare working image on local fast storage ───────────────────────────────
+# All heavy work (chroot compile, rsync) happens against a local .img file,
+# then we dd the finished image to the SD card in one sequential pass at the end.
+header "Preparing working image"
+WORK_IMG=$(mktemp -p /var/tmp --suffix=.img)
+info "Decompressing to /var/tmp (fast local storage)..."
 case "$IMAGE" in
-    *.tar.xz)
-        info "Extracting .tar.xz on the fly..."
-        tar xJOf "$IMAGE" '*.img' | dd of="$DEVICE" bs=4M status=progress conv=fsync
-        ;;
-    *.xz)
-        info "Decompressing .xz on the fly..."
-        xz -dc "$IMAGE" | dd of="$DEVICE" bs=4M status=progress conv=fsync
-        ;;
-    *)
-        dd if="$IMAGE" of="$DEVICE" bs=4M status=progress conv=fsync
-        ;;
+    *.tar.xz) tar xJOf "$IMAGE" '*.img' > "$WORK_IMG" ;;
+    *.xz)     xz -dc "$IMAGE" > "$WORK_IMG" ;;
+    *)        cp "$IMAGE" "$WORK_IMG" ;;
 esac
-sync
-step "Flash complete"
+step "Working image ready ($(du -h "$WORK_IMG" | cut -f1))"
 
-# ── Mount ─────────────────────────────────────────────────────────────────────
-header "Mounting partitions"
-
-if echo "$DEVICE" | grep -q "mmcblk\|nvme"; then
-    PART1="${DEVICE}p1"
-    PART2="${DEVICE}p2"
-else
-    PART1="${DEVICE}1"
-    PART2="${DEVICE}2"
+# For --bake, expand the image file before attaching it so the chroot has room.
+# Pi OS firstboot normally expands the rootfs on first boot; we do it here.
+if [ "$BAKE" = "1" ]; then
+    info "Expanding image by 2 GB for packages..."
+    truncate -s +2G "$WORK_IMG"
+    parted -s "$WORK_IMG" resizepart 2 100%
 fi
 
-sleep 2
-partprobe "$DEVICE" 2>/dev/null || true
-sleep 1
+# Attach image as a loop device with partition scanning
+LOOP=$(losetup -f --show --partscan "$WORK_IMG")
+PART1="${LOOP}p1"
+PART2="${LOOP}p2"
+sleep 1   # give the kernel a moment to create the partition devices
+step "Attached as loop device: $LOOP"
 
-# For --bake we expand the root partition now so the compile has room.
-# Pi OS normally does this on first boot; we do it here instead.
 if [ "$BAKE" = "1" ]; then
-    header "Expanding root partition"
-    parted -s "$DEVICE" resizepart 2 100%
-    partprobe "$DEVICE" 2>/dev/null || true
-    sleep 1
     e2fsck -f "$PART2" || true   # returns non-zero even when only fixing minor issues
     resize2fs "$PART2"
-    step "Root filesystem expanded to fill SD card"
+    step "Root filesystem expanded"
 fi
 
+# ── Mounts and cleanup ────────────────────────────────────────────────────────
 BOOT_MNT=$(mktemp -d)
 ROOT_MNT=$(mktemp -d)
 
@@ -188,9 +178,12 @@ cleanup() {
     umount "$BOOT_MNT" 2>/dev/null || true
     umount "$ROOT_MNT" 2>/dev/null || true
     rmdir "$BOOT_MNT" "$ROOT_MNT" 2>/dev/null || true
+    losetup -d "$LOOP" 2>/dev/null || true
+    rm -f "$WORK_IMG"
 }
 trap cleanup EXIT
 
+header "Mounting partitions"
 mount "$PART1" "$BOOT_MNT"
 mount "$PART2" "$ROOT_MNT"
 step "Boot: $PART1  Root: $PART2"
@@ -198,11 +191,10 @@ step "Boot: $PART1  Root: $PART2"
 # ── Headless config ───────────────────────────────────────────────────────────
 header "Writing headless configuration"
 
-# custom.toml is the Pi OS Bookworm headless config format. It is processed by
-# /usr/lib/raspberrypi-sys-mods/firstboot on first boot, which handles user
-# creation, SSH, hostname, locale, and WiFi (including setting the country code
-# so rfkill doesn't block the radio). We must also add init=firstboot to
-# cmdline.txt — without it, custom.toml is never read at all.
+# custom.toml is processed by /usr/lib/raspberrypi-sys-mods/firstboot on first
+# boot — it handles user, SSH, hostname, locale, and WiFi (including setting the
+# country code so rfkill doesn't block the radio). We add init=firstboot to
+# cmdline.txt to trigger it; without that line custom.toml is never read.
 WIFI_SECTION=""
 if [ -n "$WIFI_SSID" ]; then
     WIFI_SECTION="
@@ -235,16 +227,12 @@ keymap = "gb"
 timezone = "Europe/London"
 EOF
 
-# Trigger firstboot to process custom.toml on first power-on.
-# Append to the existing cmdline — it must remain a single line.
 CMDLINE=$(cat "$BOOT_MNT/cmdline.txt")
 if ! echo "$CMDLINE" | grep -q "init=/usr/lib/raspberrypi-sys-mods/firstboot"; then
     echo "$CMDLINE init=/usr/lib/raspberrypi-sys-mods/firstboot" > "$BOOT_MNT/cmdline.txt"
 fi
 
-# Belt-and-braces: legacy ssh file still triggers sshswitch.service on Bookworm
 touch "$BOOT_MNT/ssh"
-
 step "custom.toml + cmdline.txt written (hostname, user, SSH$([ -n "$WIFI_SSID" ] && echo ", WiFi"))"
 
 # ── Copy app ──────────────────────────────────────────────────────────────────
@@ -297,7 +285,7 @@ if [ "$BAKE" = "1" ]; then
     mount --bind /sys        "$ROOT_MNT/sys"
     mount --bind /dev        "$ROOT_MNT/dev"
     mount --bind /dev/pts    "$ROOT_MNT/dev/pts"
-    mount -t tmpfs tmpfs     "$ROOT_MNT/tmp"    # keep gcc intermediates off the SD card
+    mount -t tmpfs tmpfs     "$ROOT_MNT/tmp"
     step "Bind mounts ready"
 
     header "Installing Freezr (chroot) — this will take a few minutes"
@@ -335,12 +323,6 @@ CHROOT
     ln -sf /etc/systemd/system/freezr.service \
         "$ROOT_MNT/etc/systemd/system/multi-user.target.wants/freezr.service"
     step "freezr.service enabled"
-
-    echo -e "\n${BOLD}${GREEN}┌─────────────────────────────────────────┐${RESET}"
-    echo -e "${BOLD}${GREEN}│               All done!                 │${RESET}"
-    echo -e "${BOLD}${GREEN}└─────────────────────────────────────────┘${RESET}"
-    echo -e "  Eject the SD card and insert it into your Pi."
-    echo -e "  Freezr will be up at ${BOLD}http://${HOSTNAME}.local:8000${RESET} within ~1 minute."
 
 else
 
@@ -406,13 +388,39 @@ SERVICE
         "$ROOT_MNT/etc/systemd/system/multi-user.target.wants/freezr-setup.service"
     step "First-boot service installed"
 
-    echo -e "\n${BOLD}${GREEN}┌─────────────────────────────────────────┐${RESET}"
-    echo -e "${BOLD}${GREEN}│               All done!                 │${RESET}"
-    echo -e "${BOLD}${GREEN}└─────────────────────────────────────────┘${RESET}"
+fi
+
+# ── Write to SD card ──────────────────────────────────────────────────────────
+# Tear down mounts and loop device, then dd the finished image to the SD card
+# in a single sequential pass — much faster than random writes to the card.
+header "Writing finished image to SD card"
+umount "$ROOT_MNT/tmp"     2>/dev/null || true
+umount "$ROOT_MNT/dev/pts" 2>/dev/null || true
+umount "$ROOT_MNT/dev"     2>/dev/null || true
+umount "$ROOT_MNT/sys"     2>/dev/null || true
+umount "$ROOT_MNT/proc"    2>/dev/null || true
+rm -f "$ROOT_MNT/usr/bin/qemu-arm-static" "$ROOT_MNT/usr/bin/qemu-aarch64-static"
+[ -f "$ROOT_MNT/etc/resolv.conf.bak" ] && \
+    mv "$ROOT_MNT/etc/resolv.conf.bak" "$ROOT_MNT/etc/resolv.conf"
+umount "$BOOT_MNT"
+umount "$ROOT_MNT"
+rmdir "$BOOT_MNT" "$ROOT_MNT"
+losetup -d "$LOOP"
+
+dd if="$WORK_IMG" of="$DEVICE" bs=4M status=progress conv=fsync
+sync
+rm -f "$WORK_IMG"
+
+echo -e "\n${BOLD}${GREEN}┌─────────────────────────────────────────┐${RESET}"
+echo -e "${BOLD}${GREEN}│               All done!                 │${RESET}"
+echo -e "${BOLD}${GREEN}└─────────────────────────────────────────┘${RESET}"
+if [ "$BAKE" = "1" ]; then
+    echo -e "  Eject the SD card and insert it into your Pi."
+    echo -e "  Freezr will be up at ${BOLD}http://${HOSTNAME}.local:8000${RESET} within ~1 minute."
+else
     echo -e "  Eject the SD card and insert it into your Pi."
     echo -e "  First boot will take ${BOLD}5-25 minutes${RESET} to install (longer on a Zero W)."
     echo -e "  The Freezr password will be in ${BOLD}/home/pi/freezr-setup.log${RESET} on the Pi."
     echo -e "  Freezr will be up at ${BOLD}http://${HOSTNAME}.local:8000${RESET}"
-
 fi
 echo ""
