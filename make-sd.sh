@@ -132,6 +132,11 @@ read -p "  This will ERASE $DEVICE. Continue? [y/N] " confirm
 # All heavy work (chroot compile, rsync) happens against a local .img file,
 # then we dd the finished image to the SD card in one sequential pass at the end.
 header "Preparing working image"
+
+# Read the SD card size now so we can size the image to match it exactly.
+SD_SIZE=$(blockdev --getsize64 "$DEVICE")
+SD_SIZE_H=$(numfmt --to=iec "$SD_SIZE")
+
 WORK_IMG=$(mktemp -p /var/tmp --suffix=.img)
 info "Decompressing to /var/tmp (fast local storage)..."
 case "$IMAGE" in
@@ -139,28 +144,29 @@ case "$IMAGE" in
     *.xz)     xz -dc "$IMAGE" > "$WORK_IMG" ;;
     *)        cp "$IMAGE" "$WORK_IMG" ;;
 esac
-step "Working image ready ($(du -h "$WORK_IMG" | cut -f1))"
 
-# For --bake, expand the image file before attaching it so the chroot has room.
-# Pi OS firstboot normally expands the rootfs on first boot; we do it here.
-if [ "$BAKE" = "1" ]; then
-    info "Expanding image by 2 GB for packages..."
-    truncate -s +2G "$WORK_IMG"
-    parted -s "$WORK_IMG" resizepart 2 100%
+IMG_SIZE=$(stat -c%s "$WORK_IMG")
+if [ "$IMG_SIZE" -gt "$SD_SIZE" ]; then
+    err "Image ($(numfmt --to=iec "$IMG_SIZE")) is larger than SD card ($SD_SIZE_H). Use a bigger card."
+    exit 1
 fi
+step "Working image ready ($(numfmt --to=iec "$IMG_SIZE") → expanding to $SD_SIZE_H to match SD card)"
+
+# Expand the image file to exactly match the SD card size, then resize the
+# root partition to fill it. For --bake this gives the chroot plenty of room;
+# for first-boot installs Pi OS firstboot will see nothing left to expand.
+truncate -s "$SD_SIZE" "$WORK_IMG"
+parted -s "$WORK_IMG" resizepart 2 100%
 
 # Attach image as a loop device with partition scanning
 LOOP=$(losetup -f --show --partscan "$WORK_IMG")
 PART1="${LOOP}p1"
 PART2="${LOOP}p2"
 sleep 1   # give the kernel a moment to create the partition devices
-step "Attached as loop device: $LOOP"
 
-if [ "$BAKE" = "1" ]; then
-    e2fsck -f "$PART2" || true   # returns non-zero even when only fixing minor issues
-    resize2fs "$PART2"
-    step "Root filesystem expanded"
-fi
+e2fsck -f "$PART2" || true   # returns non-zero even when only fixing minor issues
+resize2fs "$PART2"
+step "Attached as $LOOP, root filesystem expanded to fill ${SD_SIZE_H}"
 
 # ── Mounts and cleanup ────────────────────────────────────────────────────────
 BOOT_MNT=$(mktemp -d)
