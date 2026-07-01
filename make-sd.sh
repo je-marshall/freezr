@@ -130,10 +130,11 @@ read -p "  This will ERASE $DEVICE. Continue? [y/N] " confirm
 
 # ── Prepare working image on local fast storage ───────────────────────────────
 # All heavy work (chroot compile, rsync) happens against a local .img file,
-# then we dd the finished image to the SD card in one sequential pass at the end.
+# then we dd just the used portion to the SD card. The first-boot process
+# (cloud-init or firstboot) expands the root partition to fill the card,
+# which is a fast metadata-only operation.
 header "Preparing working image"
 
-# Read the SD card size now so we can size the image to match it exactly.
 SD_SIZE=$(blockdev --getsize64 "$DEVICE")
 SD_SIZE_H=$(numfmt --to=iec "$SD_SIZE")
 
@@ -150,13 +151,22 @@ if [ "$IMG_SIZE" -gt "$SD_SIZE" ]; then
     err "Image ($(numfmt --to=iec "$IMG_SIZE")) is larger than SD card ($SD_SIZE_H). Use a bigger card."
     exit 1
 fi
-step "Working image ready ($(numfmt --to=iec "$IMG_SIZE") → expanding to $SD_SIZE_H to match SD card)"
 
-# Expand the image file to exactly match the SD card size, then resize the
-# root partition to fill it. For --bake this gives the chroot plenty of room;
-# for first-boot installs Pi OS firstboot will see nothing left to expand.
-truncate -s "$SD_SIZE" "$WORK_IMG"
-parted -s "$WORK_IMG" resizepart 2 100%
+if [ "$BAKE" = "1" ]; then
+    # Expand the image by 2 GB to give the chroot room for packages.
+    # Check the expanded size still fits on the card.
+    BAKE_SIZE=$((IMG_SIZE + 2*1024*1024*1024))
+    if [ "$BAKE_SIZE" -gt "$SD_SIZE" ]; then
+        err "Image + 2 GB for bake ($(numfmt --to=iec "$BAKE_SIZE")) won't fit on card ($SD_SIZE_H)."
+        exit 1
+    fi
+    info "Expanding image by 2 GB for chroot packages..."
+    truncate -s +2G "$WORK_IMG"
+    parted -s "$WORK_IMG" resizepart 2 100%
+    step "Working image ready ($(numfmt --to=iec "$IMG_SIZE") + 2 GB)"
+else
+    step "Working image ready ($(numfmt --to=iec "$IMG_SIZE"))"
+fi
 
 # Attach image as a loop device with partition scanning
 LOOP=$(losetup -f --show --partscan "$WORK_IMG")
@@ -164,9 +174,13 @@ PART1="${LOOP}p1"
 PART2="${LOOP}p2"
 sleep 1   # give the kernel a moment to create the partition devices
 
-e2fsck -f "$PART2" || true   # returns non-zero even when only fixing minor issues
-resize2fs "$PART2"
-step "Attached as $LOOP, root filesystem expanded to fill ${SD_SIZE_H}"
+if [ "$BAKE" = "1" ]; then
+    e2fsck -f "$PART2" || true
+    resize2fs "$PART2"
+    step "Attached as $LOOP, root filesystem expanded for bake"
+else
+    step "Attached as $LOOP"
+fi
 
 # ── Mounts and cleanup ────────────────────────────────────────────────────────
 BOOT_MNT=$(mktemp -d)
