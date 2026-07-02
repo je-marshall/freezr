@@ -75,6 +75,28 @@ def init_db_command(debug):
     init_db(debug)
     click.echo('Initialized the database.')
 
+@click.command('reset-password')
+@click.argument('password', required=False)
+def reset_password_command(password):
+    """Reset the Freezr login password. Generates a random one if no password given."""
+    if not password:
+        alphabet = string.ascii_letters + string.digits
+        password = ''.join(secrets.choice(alphabet) for i in range(12))
+        generated = True
+    else:
+        generated = False
+
+    db = get_db()
+    db.execute('UPDATE user SET password = ? WHERE id = 1',
+               (generate_password_hash(password),))
+    db.commit()
+
+    if generated:
+        click.echo(f"\nNew password: {password}\n")
+    else:
+        click.echo("\nPassword updated.\n")
+
 def init_app(app):
     app.teardown_appcontext(close_db)
     app.cli.add_command(init_db_command)
+    app.cli.add_command(reset_password_command)
