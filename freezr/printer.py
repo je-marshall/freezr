@@ -1,18 +1,20 @@
 import logging
 import os
-import textwrap
-from datetime import datetime
-import qrcode
 from PIL import Image, ImageDraw, ImageFont
+import qrcode
 from brother_ql.conversion import convert
 from brother_ql.backends.helpers import send
 from brother_ql.raster import BrotherQLRaster
 
 log = logging.getLogger(__name__)
 
+BORDER = 5
+PAD    = 14
+
 FONT_SEARCH_PATHS = [
     "/usr/share/fonts/truetype/liberation",  # Debian / Pi OS
     "/usr/share/fonts/liberation",           # Fedora / RPM
+    "/usr/share/fonts/liberation-sans-fonts",# Fedora alt path
 ]
 
 def _find_font(name):
@@ -27,53 +29,85 @@ def create_label_image(entry_id, description, date_str, label_size='62x29'):
     label_def = next((l for l in ALL_LABELS if l.identifier == label_size), None)
     if label_def and label_def.dots_printable:
         width, height = label_def.dots_printable
-        if height == 0:  # endless/continuous tape — choose our own cut length
+        if height == 0:
             height = 271
     else:
         width, height = 696, 271
 
     log.debug('Creating label image: entry_id=%s description=%r date=%s dims=%dx%d',
               entry_id, description, date_str, width, height)
-    img = Image.new('RGB', (width, height), color='white')
 
-    qr_size = height - 48
-    qr = qrcode.QRCode(
-        version=1,
-        error_correction=qrcode.constants.ERROR_CORRECT_H,
-        box_size=10,
-        border=1,
-    )
+    img  = Image.new('RGB', (width, height), 'white')
+    draw = ImageDraw.Draw(img)
+
+    # Border
+    draw.rectangle([0, 0, width - 1, height - 1], outline='black', width=BORDER)
+
+    # QR code — right-aligned, padded inside border
+    qr_size = height - (BORDER + PAD) * 2
+    qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_H,
+                       box_size=10, border=1)
     qr.add_data(str(entry_id))
     qr.make(fit=True)
-    qr_img = qr.make_image(fill_color="black", back_color="white")
-    qr_img = qr_img.resize((qr_size, qr_size))
-    img.paste(qr_img, (24, (height - qr_size) // 2))
-    log.debug('QR code generated and pasted (%dx%d)', qr_size, qr_size)
+    qr_img = qr.make_image(fill_color='black', back_color='white').resize((qr_size, qr_size))
+    qr_x = width - PAD - qr_size
+    qr_y = (height - qr_size) // 2
+    img.paste(qr_img, (qr_x, qr_y))
+    log.debug('QR code pasted at (%d,%d) size %d', qr_x, qr_y, qr_size)
 
-    draw = ImageDraw.Draw(img)
-    bold_path    = _find_font("LiberationSans-Bold.ttf")
-    regular_path = _find_font("LiberationSans-Regular.ttf")
+    # Vertical divider
+    div_x = qr_x - PAD
+    draw.line([(div_x, BORDER + PAD), (div_x, height - BORDER - PAD)], fill='#cccccc', width=2)
+
+    # Fonts
+    bold_path    = _find_font('LiberationSans-Bold.ttf')
+    regular_path = _find_font('LiberationSans-Regular.ttf')
     try:
         if not bold_path or not regular_path:
             raise FileNotFoundError
-        font_large = ImageFont.truetype(bold_path, 42)
-        font_small = ImageFont.truetype(regular_path, 28)
+        f_desc = ImageFont.truetype(bold_path,    38)
+        f_date = ImageFont.truetype(regular_path, 22)
         log.debug('Loaded Liberation fonts from %s', os.path.dirname(bold_path))
     except (IOError, OSError):
         log.warning('Liberation fonts not found — falling back to default')
-        font_large = ImageFont.load_default()
-        font_small = ImageFont.load_default()
+        f_desc = ImageFont.load_default()
+        f_date = ImageFont.load_default()
 
-    text_x = 24 + qr_size + 16
-    wrapped_desc = textwrap.fill(description.upper(), width=14)
-    draw.text((text_x, height // 6),      wrapped_desc,         font=font_large, fill="black")
-    draw.text((text_x, height - 50),      f"Added: {date_str}", font=font_small, fill="black")
+    # Text area
+    text_x = BORDER + PAD
+    text_w = div_x - PAD - text_x
+
+    # Word-wrap description to fit text area width
+    words = description.upper().split()
+    lines, line = [], []
+    for word in words:
+        test = ' '.join(line + [word])
+        if draw.textlength(test, font=f_desc) <= text_w:
+            line.append(word)
+        else:
+            if line:
+                lines.append(' '.join(line))
+            line = [word]
+    if line:
+        lines.append(' '.join(line))
+
+    line_h = 44
+    total_h = len(lines) * line_h
+    desc_y = (height * 2 // 3 - total_h) // 2
+    for l in lines:
+        draw.text((text_x, desc_y), l, font=f_desc, fill='black')
+        desc_y += line_h
+
+    # Horizontal rule then date
+    rule_y = height * 2 // 3
+    draw.line([(text_x, rule_y), (div_x - PAD, rule_y)], fill='#aaaaaa', width=1)
+    draw.text((text_x, rule_y + 8), f'Added: {date_str}', font=f_date, fill='#444444')
 
     log.debug('Label image created (%dx%d)', width, height)
     return img
 
 
-def print_label(entry_id, description, date_str, printer_identifier, printer_model='QL-600', label_size='62x29'):
+def print_label(entry_id, description, date_str, printer_identifier, printer_model='QL-700', label_size='62'):
     """
     Generates the image and dispatches it directly to the Brother print backend.
     """
