@@ -50,7 +50,8 @@ def get_entry(id, check_author=True):
 
 def generate_description(entries):
     for entry in entries:
-        desc_string = f'{entry["quantity"]}x '
+        qty = str(entry["quantity"])
+        desc_string = (qty + 'x ') if qty.isdigit() else (qty + ' ')
         if entry['skin']:
             desc_string += 'skin on '
         if entry['bone']:

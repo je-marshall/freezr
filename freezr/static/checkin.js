@@ -117,6 +117,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     itemDescription += ' ' + subsubSelect.options[subsubSelect.selectedIndex].text;
                 }
             }
+            const qtyInput = checkinForm.querySelector('[name="quantity"]');
+            const qty = qtyInput ? qtyInput.value.trim() : '1';
+            const qtyPrefix = /^\d+$/.test(qty) ? qty + 'x' : qty;
+            itemDescription = qtyPrefix + ' ' + itemDescription;
 
             const formData = new FormData(checkinForm);
             

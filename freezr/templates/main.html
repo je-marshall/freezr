@@ -111,9 +111,7 @@
                     </div>
                     <div style="flex: 1;">
                         <label style="display: block; font-weight: bold; margin-bottom: 5px;">Qty:</label>
-                        <select name="quantity" class="cs-select" style="width: 100%;">
-                            {% for i in range(1, 11) %}<option value="{{ i }}">{{ i }}</option>{% endfor %}
-                        </select>
+                        <input type="text" name="quantity" class="cs-input" style="width: 100%;" value="1" placeholder="2, 500g, 1L">
                     </div>
                 </div>
                 <div>
