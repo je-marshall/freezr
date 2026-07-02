@@ -111,10 +111,11 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Determine item description for the physical label
             let itemDescription = 'UNKNOWN ITEM';
-            if (subsubSelect && subsubSelect.value) {
-                itemDescription = subsubSelect.options[subsubSelect.selectedIndex].text;
-            } else if (subcatSelect && subcatSelect.value) {
+            if (subcatSelect && subcatSelect.value) {
                 itemDescription = subcatSelect.options[subcatSelect.selectedIndex].text;
+                if (subsubSelect && subsubSelect.value) {
+                    itemDescription += ' ' + subsubSelect.options[subsubSelect.selectedIndex].text;
+                }
             }
 
             const formData = new FormData(checkinForm);
