@@ -512,6 +512,7 @@ apt-get install -y \
     gcc git sqlite3 \
     libusb-1.0-0-dev libjpeg-dev zlib1g-dev libfreetype6-dev fonts-liberation
 
+id "$SSH_USER" &>/dev/null || useradd -m -s /bin/bash "$SSH_USER"
 usermod -a -G lp,plugdev "$SSH_USER"
 
 git clone https://github.com/je-marshall/freezr.git "/home/$SSH_USER/freezr"
@@ -549,6 +550,7 @@ apt-get install -y \\
     gcc git sqlite3 \\
     libusb-1.0-0-dev libjpeg-dev zlib1g-dev libfreetype6-dev fonts-liberation
 
+id ${SSH_USER} &>/dev/null || useradd -m -s /bin/bash ${SSH_USER}
 usermod -a -G lp,plugdev ${SSH_USER}
 
 git clone https://github.com/je-marshall/freezr.git /home/${SSH_USER}/freezr
