@@ -66,7 +66,7 @@ def create_label_image(entry_id, description, date_str, label_size='62x29'):
         if not bold_path or not regular_path:
             raise FileNotFoundError
         f_desc = ImageFont.truetype(bold_path,    38)
-        f_date = ImageFont.truetype(regular_path, 22)
+        f_date = ImageFont.truetype(regular_path, 30)
         log.debug('Loaded Liberation fonts from %s', os.path.dirname(bold_path))
     except (IOError, OSError):
         log.warning('Liberation fonts not found — falling back to default')
@@ -77,7 +77,7 @@ def create_label_image(entry_id, description, date_str, label_size='62x29'):
     text_x = BORDER + PAD
     text_w = div_x - PAD - text_x
 
-    # Word-wrap description to fit text area width
+    # Word-wrap description to fit text area width, capped at 3 lines
     words = description.upper().split()
     lines, line = [], []
     for word in words:
@@ -88,6 +88,13 @@ def create_label_image(entry_id, description, date_str, label_size='62x29'):
             if line:
                 lines.append(' '.join(line))
             line = [word]
+            if len(lines) == 2:
+                last = ' '.join(line)
+                while draw.textlength(last + '…', font=f_desc) > text_w and last:
+                    last = last[:-1]
+                lines.append(last + '…')
+                line = []
+                break
     if line:
         lines.append(' '.join(line))
 
@@ -101,7 +108,7 @@ def create_label_image(entry_id, description, date_str, label_size='62x29'):
     # Horizontal rule then date
     rule_y = height * 2 // 3
     draw.line([(text_x, rule_y), (div_x - PAD, rule_y)], fill='#aaaaaa', width=1)
-    draw.text((text_x, rule_y + 8), f'Added: {date_str}', font=f_date, fill='#444444')
+    draw.text((text_x, rule_y + 8), date_str, font=f_date, fill='#444444')
 
     log.debug('Label image created (%dx%d)', width, height)
     return img
