@@ -104,12 +104,16 @@ def print_label(entry_id, description, date_str, printer_identifier, printer_mod
             backend = 'pyusb'
         log.info('Sending to printer: backend=%s identifier=%r', backend, printer_identifier)
 
-        send(
+        result = send(
             instructions=instructions,
             printer_identifier=printer_identifier,
             backend_identifier=backend,
             blocking=True,
         )
+
+        if result.get('errors'):
+            log.warning('Printer reported errors: %s', result['errors'])
+            return False, f"Printer error: {', '.join(result['errors'])}"
 
         log.info('Label printed successfully')
         return True, "Label printed successfully."
