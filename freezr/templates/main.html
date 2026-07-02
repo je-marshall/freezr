@@ -3,8 +3,8 @@
 {% block title %}Inventory{% endblock %}
 
 {% block header %}
-    <div style="display: flex; width: 100%; margin: 0 auto; gap: 15px; align-items: stretch; box-sizing: border-box;">
-        
+    <div id="header-actions" style="display: flex; width: 100%; margin: 0 auto; gap: 10px; align-items: stretch; box-sizing: border-box; flex-wrap: wrap;">
+
         <button id="btn-scan-init" class="cs-btn" type="button" style="padding: 10px; display: flex; justify-content: center; align-items: center; cursor: pointer;">
             <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="3" y="3" width="7" height="7"></rect>
@@ -16,19 +16,20 @@
                 <line x1="20" y1="9" x2="20.01" y2="9"></line>
             </svg>
         </button>
-        
+
         <button id="btn-checkin" class="cs-btn" type="button" style="padding: 10px 20px; font-weight: bold; cursor: pointer;">
             Check In
         </button>
-        
-        <input type="text" id="search-input" class="cs-input" placeholder="Search inventory..." style="flex-grow: 1; padding: 10px; font-weight: bold; font-size: 1rem;">
-        
-        <button id="btn-search" class="cs-btn" type="button" style="padding: 10px; display: flex; justify-content: center; align-items: center;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-            </svg>
-        </button>
+
+        <div id="search-bar" style="display: flex; flex-grow: 1; gap: 10px; min-width: 0;">
+            <input type="text" id="search-input" class="cs-input" placeholder="Search inventory..." style="flex-grow: 1; min-width: 0; padding: 10px; font-weight: bold; font-size: 1rem;">
+            <button id="btn-search" class="cs-btn" type="button" style="padding: 10px; display: flex; justify-content: center; align-items: center; flex-shrink: 0;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+            </button>
+        </div>
     </div>
 {% endblock %}
 

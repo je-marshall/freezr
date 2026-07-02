@@ -42,6 +42,9 @@
 /* --- MOBILE RESPONSIVE --- */
 
 @media (max-width: 600px) {
+    /* Prevent any child from causing horizontal scroll */
+    body { overflow-x: hidden; }
+
     /* Nav: hide the long subtitle */
     .nav-subtitle { display: none; }
 
@@ -53,6 +56,12 @@
 
     nav {
         margin: 12px auto !important;
+    }
+
+    /* Search bar: drop to its own full-width row */
+    #search-bar {
+        flex-basis: 100%;
+        order: 3;
     }
 
     /* Dialogs: full width, scrollable, anchored to top */
@@ -76,7 +85,7 @@
 
     /* Inventory list: use more of the short mobile viewport */
     .scroll-container {
-        max-height: 72vh !important;
+        max-height: 68vh !important;
     }
 }
 
