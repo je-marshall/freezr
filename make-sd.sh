@@ -389,7 +389,7 @@ apt-get update -y
 apt-get install -y \
     python3-venv python3-dev python3-pip \
     gcc git sqlite3 \
-    libusb-1.0-0-dev libjpeg-dev zlib1g-dev libfreetype6-dev
+    libusb-1.0-0-dev libjpeg-dev zlib1g-dev libfreetype6-dev fonts-liberation
 
 usermod -a -G lp,plugdev pi
 
@@ -426,7 +426,7 @@ apt-get update -y
 apt-get install -y \
     python3-venv python3-dev python3-pip \
     gcc git sqlite3 \
-    libusb-1.0-0-dev libjpeg-dev zlib1g-dev libfreetype6-dev
+    libusb-1.0-0-dev libjpeg-dev zlib1g-dev libfreetype6-dev fonts-liberation
 
 usermod -a -G lp,plugdev pi
 

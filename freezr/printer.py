@@ -10,15 +10,31 @@ from brother_ql.raster import BrotherQLRaster
 
 log = logging.getLogger(__name__)
 
-def create_label_image(entry_id, description, date_str):
-    """
-    Creates a PIL Image formatted precisely for a 62x29mm Brother Label.
-    At 300 DPI, 62x29mm is exactly 696 x 348 pixels.
-    """
-    log.debug('Creating label image: entry_id=%s description=%r date=%s', entry_id, description, date_str)
-    width, height = 696, 348
+FONT_SEARCH_PATHS = [
+    "/usr/share/fonts/truetype/liberation",  # Debian / Pi OS
+    "/usr/share/fonts/liberation",           # Fedora / RPM
+]
+
+def _find_font(name):
+    for d in FONT_SEARCH_PATHS:
+        p = os.path.join(d, name)
+        if os.path.exists(p):
+            return p
+    return None
+
+def create_label_image(entry_id, description, date_str, label_size='62x29'):
+    from brother_ql.labels import ALL_LABELS
+    label_def = next((l for l in ALL_LABELS if l.identifier == label_size), None)
+    if label_def and label_def.dots_total:
+        width, height = label_def.dots_total
+    else:
+        width, height = 696, 271
+
+    log.debug('Creating label image: entry_id=%s description=%r date=%s dims=%dx%d',
+              entry_id, description, date_str, width, height)
     img = Image.new('RGB', (width, height), color='white')
 
+    qr_size = height - 48
     qr = qrcode.QRCode(
         version=1,
         error_correction=qrcode.constants.ERROR_CORRECT_H,
@@ -28,26 +44,26 @@ def create_label_image(entry_id, description, date_str):
     qr.add_data(str(entry_id))
     qr.make(fit=True)
     qr_img = qr.make_image(fill_color="black", back_color="white")
-    qr_img = qr_img.resize((300, 300))
-    img.paste(qr_img, (24, 24))
-    log.debug('QR code generated and pasted')
+    qr_img = qr_img.resize((qr_size, qr_size))
+    img.paste(qr_img, (24, (height - qr_size) // 2))
+    log.debug('QR code generated and pasted (%dx%d)', qr_size, qr_size)
 
     draw = ImageDraw.Draw(img)
-    font_path_bold    = "/usr/share/fonts/liberation/LiberationSans-Bold.ttf"
-    font_path_regular = "/usr/share/fonts/liberation/LiberationSans-Regular.ttf"
+    bold_path    = _find_font("LiberationSans-Bold.ttf")
+    regular_path = _find_font("LiberationSans-Regular.ttf")
     try:
-        font_large = ImageFont.truetype(font_path_bold, 42)
-        font_small = ImageFont.truetype(font_path_regular, 28)
-        log.debug('Loaded Liberation fonts')
-    except IOError:
-        log.warning('Liberation fonts not found at %s / %s — falling back to default',
-                    font_path_bold, font_path_regular)
+        font_large = ImageFont.truetype(bold_path, 42)
+        font_small = ImageFont.truetype(regular_path, 28)
+        log.debug('Loaded Liberation fonts from %s', os.path.dirname(bold_path))
+    except (IOError, TypeError):
+        log.warning('Liberation fonts not found — falling back to default')
         font_large = ImageFont.load_default()
         font_small = ImageFont.load_default()
 
+    text_x = 24 + qr_size + 16
     wrapped_desc = textwrap.fill(description.upper(), width=14)
-    draw.text((340, 40),  wrapped_desc,          font=font_large, fill="black")
-    draw.text((340, 260), f"Added: {date_str}",  font=font_small, fill="black")
+    draw.text((text_x, height // 6),      wrapped_desc,         font=font_large, fill="black")
+    draw.text((text_x, height - 50),      f"Added: {date_str}", font=font_small, fill="black")
 
     log.debug('Label image created (%dx%d)', width, height)
     return img
@@ -60,7 +76,7 @@ def print_label(entry_id, description, date_str, printer_identifier, printer_mod
     log.info('print_label called: entry_id=%s model=%s label=%s identifier=%r',
              entry_id, printer_model, label_size, printer_identifier)
     try:
-        img = create_label_image(entry_id, description, date_str)
+        img = create_label_image(entry_id, description, date_str, label_size)
 
         log.debug('Initialising BrotherQLRaster for model %s', printer_model)
         qlr = BrotherQLRaster(printer_model)
