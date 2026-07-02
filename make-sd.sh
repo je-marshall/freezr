@@ -397,7 +397,7 @@ export FLASK_APP=freezr
 apt-get update -y
 apt-get install -y \
     python3-venv python3-dev python3-pip \
-    gcc sqlite3 \
+    gcc git sqlite3 \
     libusb-1.0-0-dev libjpeg-dev zlib1g-dev libfreetype6-dev
 
 usermod -a -G lp,plugdev pi
@@ -433,7 +433,7 @@ set -e
 apt-get update -y
 apt-get install -y \
     python3-venv python3-dev python3-pip \
-    gcc sqlite3 \
+    gcc git sqlite3 \
     libusb-1.0-0-dev libjpeg-dev zlib1g-dev libfreetype6-dev
 
 usermod -a -G lp,plugdev pi
