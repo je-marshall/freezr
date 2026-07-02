@@ -86,10 +86,10 @@
                                     <details id="details-sub-{{ sub['id'] }}" class="persist-tree">
                                         <summary>
                                             <div class="toggle-icon"></div>
-                                            <div class="tree-label">{{ sub['subcat'] }}</div>
+                                            <div class="tree-label">{{ sub['subcat'] }} <span style="font-size:0.7em;opacity:0.5;margin-left:6px;">{{ sub['quantity_type'] }}</span></div>
                                             <div style="display: flex; gap: 5px;">
                                                 <button class="cs-btn tree-btn" onclick="event.preventDefault(); openAddSubsub('{{ sub['id'] }}')">+ Type</button>
-                                                <button class="cs-btn tree-btn" data-id="{{ sub['id'] }}" data-name="{{ sub['subcat'] }}" onclick="event.preventDefault(); openEditSubcat(this)">Edit</button>
+                                                <button class="cs-btn tree-btn" data-id="{{ sub['id'] }}" data-name="{{ sub['subcat'] }}" data-qty-type="{{ sub['quantity_type'] }}" onclick="event.preventDefault(); openEditSubcat(this)">Edit</button>
                                             </div>
                                         </summary>
                                         <ul class="tree-branch">
@@ -262,8 +262,16 @@
         <button class="cs-btn close" type="button" onclick="document.getElementById('add-subcat-modal').close()"></button>
     </div>
     <div class="content" style="padding: 20px;">
-        <form id="add-subcat-form" method="POST" action="">
-            <input type="text" name="subcat_name" required class="cs-input" style="width: 100%; margin-bottom: 15px;" placeholder="e.g. Chicken">
+        <form id="add-subcat-form" method="POST" action="" style="display: flex; flex-direction: column; gap: 12px;">
+            <input type="text" name="subcat_name" required class="cs-input" style="width: 100%;" placeholder="e.g. Chicken">
+            <div>
+                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Quantity type:</label>
+                <select name="quantity_type" class="cs-select" style="width: 100%;">
+                    <option value="count">Count (1x, 2x…)</option>
+                    <option value="weight">Weight (g / kg)</option>
+                    <option value="volume">Volume (ml / L)</option>
+                </select>
+            </div>
             <button type="submit" class="cs-btn" style="width: 100%;">Add</button>
         </form>
     </div>
@@ -275,8 +283,16 @@
         <button class="cs-btn close" type="button" onclick="document.getElementById('edit-subcat-modal').close()"></button>
     </div>
     <div class="content" style="padding: 20px;">
-        <form id="edit-subcat-form" method="POST" action="">
-            <input type="text" id="edit-subcat-name" name="subcat_name" required class="cs-input" style="width: 100%; margin-bottom: 15px;">
+        <form id="edit-subcat-form" method="POST" action="" style="display: flex; flex-direction: column; gap: 12px;">
+            <input type="text" id="edit-subcat-name" name="subcat_name" required class="cs-input" style="width: 100%;">
+            <div>
+                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Quantity type:</label>
+                <select id="edit-subcat-qty-type" name="quantity_type" class="cs-select" style="width: 100%;">
+                    <option value="count">Count (1x, 2x…)</option>
+                    <option value="weight">Weight (g / kg)</option>
+                    <option value="volume">Volume (ml / L)</option>
+                </select>
+            </div>
             <div style="display: flex; justify-content: space-between; gap: 10px;">
                 <button type="submit" name="action" value="delete" class="cs-btn danger">Delete</button>
                 <button type="submit" name="action" value="save" class="cs-btn">Save</button>
@@ -370,6 +386,7 @@
     function openEditSubcat(buttonEl) {
         const id = buttonEl.getAttribute('data-id');
         document.getElementById('edit-subcat-name').value = buttonEl.getAttribute('data-name');
+        document.getElementById('edit-subcat-qty-type').value = buttonEl.getAttribute('data-qty-type') || 'count';
         const baseUrl = "{{ url_for('categories.edit_subcat', id=0) }}";
         document.getElementById('edit-subcat-form').action = baseUrl.replace('/0', '/' + id);
         document.getElementById('edit-subcat-modal').showModal();

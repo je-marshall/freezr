@@ -93,9 +93,13 @@ def edit(id):
 @login_required
 def add_subcat(cat_id):
     subcat_name = request.form.get('subcat_name')
+    quantity_type = request.form.get('quantity_type', 'count')
     if subcat_name:
         db = get_db()
-        db.execute('INSERT INTO subcats (subcat, category_id, auth_id) VALUES (?, ?, ?)', (subcat_name, cat_id, g.user['id']))
+        db.execute(
+            'INSERT INTO subcats (subcat, quantity_type, category_id, auth_id) VALUES (?, ?, ?, ?)',
+            (subcat_name, quantity_type, cat_id, g.user['id'])
+        )
         db.commit()
         flash(f'Sub-category "{subcat_name}" added!', 'success')
     return redirect(url_for('categories.index'))
@@ -117,8 +121,12 @@ def edit_subcat(id):
             flash('Sub-category deleted.', 'success')
     else:
         subcat_name = request.form.get('subcat_name')
+        quantity_type = request.form.get('quantity_type', 'count')
         if subcat_name:
-            db.execute('UPDATE subcats SET subcat = ? WHERE id = ? AND auth_id = ?', (subcat_name, id, g.user['id']))
+            db.execute(
+                'UPDATE subcats SET subcat = ?, quantity_type = ? WHERE id = ? AND auth_id = ?',
+                (subcat_name, quantity_type, id, g.user['id'])
+            )
             db.commit()
             flash('Sub-category updated.', 'success')
     return redirect(url_for('categories.index'))

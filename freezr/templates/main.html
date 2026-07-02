@@ -111,7 +111,14 @@
                     </div>
                     <div style="flex: 1;">
                         <label style="display: block; font-weight: bold; margin-bottom: 5px;">Qty:</label>
-                        <input type="text" name="quantity" class="cs-input" style="width: 100%;" value="1" placeholder="2, 500g, 1L">
+                        <div style="display: flex; gap: 4px;">
+                            <input type="number" id="qty-number" class="cs-input" style="flex: 1; min-width: 0;" value="1" min="1" step="1">
+                            <select id="qty-unit" class="cs-select" style="display: none; flex-shrink: 0; min-width: unset;">
+                                <option value="g">g</option>
+                                <option value="kg">kg</option>
+                            </select>
+                        </div>
+                        <input type="hidden" name="quantity" id="qty-hidden" value="1">
                     </div>
                 </div>
                 <div>

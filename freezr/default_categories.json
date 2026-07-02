@@ -1,51 +1,51 @@
 {
     "Meat": {
-        "Chicken":  ["breast", "thigh", "leg", "wing", "supreme", "whole", "liver"],
-        "Duck":     ["breast", "leg", "confit", "whole"],
-        "Beef":     ["steak", "mince", "brisket", "rib", "joint", "other"],
-        "Lamb":     ["chop", "leg", "shoulder", "rack", "shank", "mince"],
-        "Pork":     ["chop", "belly", "tenderloin", "loin", "shoulder", "mince", "rillettes"],
-        "Sausage":  ["cumberland", "lincolnshire", "pork", "chipolata", "toulouse", "merguez", "andouille", "boudin noir", "boudin blanc", "diots", "morteau", "chorizo", "other"],
-        "Venison":  ["haunch", "saddle", "mince"],
-        "Rabbit":   ["whole", "leg", "saddle"],
-        "Pheasant": ["breast", "leg", "whole"]
+        "Chicken":  {"qty": "count",  "items": ["breast", "thigh", "leg", "wing", "supreme", "whole", "liver"]},
+        "Duck":     {"qty": "count",  "items": ["breast", "leg", "confit", "whole"]},
+        "Beef":     {"qty": "weight", "items": ["steak", "mince", "brisket", "rib", "joint", "other"]},
+        "Lamb":     {"qty": "weight", "items": ["chop", "leg", "shoulder", "rack", "shank", "mince"]},
+        "Pork":     {"qty": "weight", "items": ["chop", "belly", "tenderloin", "loin", "shoulder", "mince", "rillettes"]},
+        "Sausage":  {"qty": "count",  "items": ["cumberland", "lincolnshire", "pork", "chipolata", "toulouse", "merguez", "andouille", "boudin noir", "boudin blanc", "diots", "morteau", "chorizo", "other"]},
+        "Venison":  {"qty": "weight", "items": ["haunch", "saddle", "mince"]},
+        "Rabbit":   {"qty": "count",  "items": ["whole", "leg", "saddle"]},
+        "Pheasant": {"qty": "count",  "items": ["breast", "leg", "whole"]}
     },
     "Fish & Seafood": {
-        "Fish":      ["salmon", "cod", "haddock", "sea bass", "trout", "sole", "mackerel", "tuna"],
-        "Shellfish": ["prawns", "scallops", "mussels", "crab", "langoustine"],
-        "Other":     ["squid", "octopus", "other"]
+        "Fish":      {"qty": "weight", "items": ["salmon", "cod", "haddock", "sea bass", "trout", "sole", "mackerel", "tuna"]},
+        "Shellfish": {"qty": "weight", "items": ["prawns", "scallops", "mussels", "crab", "langoustine"]},
+        "Other":     {"qty": "weight", "items": ["squid", "octopus", "other"]}
     },
     "Dairy": {
-        "Cheese":    ["cheddar", "comté", "brie", "camembert", "roquefort", "mozzarella", "parmesan", "reblochon", "gruyère", "other"],
-        "Cream":     ["single", "double", "crème fraîche"],
-        "Butter":    ["salted", "unsalted"],
-        "Ice Cream": ["vanilla", "chocolate", "other"]
+        "Cheese":    {"qty": "weight",  "items": ["cheddar", "comté", "brie", "camembert", "roquefort", "mozzarella", "parmesan", "reblochon", "gruyère", "other"]},
+        "Cream":     {"qty": "volume",  "items": ["single", "double", "crème fraîche"]},
+        "Butter":    {"qty": "weight",  "items": ["salted", "unsalted"]},
+        "Ice Cream": {"qty": "volume",  "items": ["vanilla", "chocolate", "other"]}
     },
     "Bread & Pastry": {
-        "Bread":   ["baguette", "white", "wholemeal", "sourdough", "focaccia", "brioche"],
-        "Pastry":  ["croissant", "pain au chocolat", "quiche", "galette", "tart"],
-        "Buns":    ["burger", "hot dog"]
+        "Bread":   {"qty": "count", "items": ["baguette", "white", "wholemeal", "sourdough", "focaccia", "brioche"]},
+        "Pastry":  {"qty": "count", "items": ["croissant", "pain au chocolat", "quiche", "galette", "tart"]},
+        "Buns":    {"qty": "count", "items": ["burger", "hot dog"]}
     },
     "Vegetables": {
-        "Root":        ["carrot", "parsnip", "potato", "sweet potato", "beetroot", "celeriac"],
-        "Brassica":    ["broccoli", "cauliflower", "cabbage", "kale"],
-        "Pods & Beans": ["peas", "edamame", "broad beans", "green beans", "sweetcorn"],
-        "Other":       ["spinach", "leek", "onion", "courgette", "other"]
+        "Root":         {"qty": "weight", "items": ["carrot", "parsnip", "potato", "sweet potato", "beetroot", "celeriac"]},
+        "Brassica":     {"qty": "weight", "items": ["broccoli", "cauliflower", "cabbage", "kale"]},
+        "Pods & Beans": {"qty": "weight", "items": ["peas", "edamame", "broad beans", "green beans", "sweetcorn"]},
+        "Other":        {"qty": "weight", "items": ["spinach", "leek", "onion", "courgette", "other"]}
     },
     "Fruit": {
-        "Berries":     ["strawberry", "raspberry", "blueberry", "blackcurrant", "cherry"],
-        "Stone Fruit": ["peach", "plum", "apricot", "mango"],
-        "Other":       ["apple", "banana", "other"]
+        "Berries":     {"qty": "weight", "items": ["strawberry", "raspberry", "blueberry", "blackcurrant", "cherry"]},
+        "Stone Fruit": {"qty": "weight", "items": ["peach", "plum", "apricot", "mango"]},
+        "Other":       {"qty": "count",  "items": ["apple", "banana", "other"]}
     },
     "Prepared": {
-        "Soup":              ["vegetable", "chicken", "fish", "other"],
-        "Stew & Casserole":  ["beef", "chicken", "lamb", "other"],
-        "Pasta & Rice":      ["pasta sauce", "risotto", "other"],
-        "Pastry Dishes":     ["quiche", "tart", "pie", "crumble"],
-        "Other":             ["other"]
+        "Soup":             {"qty": "volume", "items": ["vegetable", "chicken", "fish", "other"]},
+        "Stew & Casserole": {"qty": "weight", "items": ["beef", "chicken", "lamb", "other"]},
+        "Pasta & Rice":     {"qty": "weight", "items": ["pasta sauce", "risotto", "other"]},
+        "Pastry Dishes":    {"qty": "count",  "items": ["quiche", "tart", "pie", "crumble"]},
+        "Other":            {"qty": "count",  "items": ["other"]}
     },
     "Stock & Sauce": {
-        "Stock": ["chicken", "beef", "fish", "vegetable"],
-        "Sauce": ["gravy", "béchamel", "tomato", "other"]
+        "Stock": {"qty": "volume", "items": ["chicken", "beef", "fish", "vegetable"]},
+        "Sauce": {"qty": "volume", "items": ["gravy", "béchamel", "tomato", "other"]}
     }
 }

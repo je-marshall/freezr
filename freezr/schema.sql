@@ -22,6 +22,7 @@ CREATE TABLE subcats (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     category_id INTEGER NOT NULL REFERENCES categories (id),
     subcat TEXT NOT NULL,
+    quantity_type TEXT NOT NULL DEFAULT 'count',
     auth_id INTEGER NOT NULL REFERENCES user (id)
 );
 
@@ -52,7 +53,7 @@ CREATE TABLE entries (
     minced BOOLEAN NOT NULL CHECK (minced IN (0, 1)) DEFAULT 0,
     grated BOOLEAN NOT NULL CHECK (grated IN (0, 1)) DEFAULT 0,
     cooked BOOLEAN NOT NULL CHECK (cooked IN (0, 1)) DEFAULT 0,
-    quantity INTEGER NOT NULL DEFAULT 1,
+    quantity TEXT NOT NULL DEFAULT '1',
     notes TEXT,
     auth_id INTEGER NOT NULL REFERENCES user (id),
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP

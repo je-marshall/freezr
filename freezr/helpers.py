@@ -92,9 +92,18 @@ def seed_default_categories(user_id):
     for cat_name, subcats in default_categories.items():
         c_cursor = db.execute('INSERT INTO categories (category, auth_id) VALUES (?, ?)', (cat_name, user_id))
         cat_id = c_cursor.lastrowid
-        for subcat_name, subsubs in subcats.items():
-            s_cursor = db.execute('INSERT INTO subcats (subcat, category_id, auth_id) VALUES (?, ?, ?)', (subcat_name, cat_id, user_id))
+        for subcat_name, subcat_val in subcats.items():
+            if isinstance(subcat_val, dict):
+                qty_type = subcat_val.get('qty', 'count')
+                subsub_list = subcat_val.get('items', [])
+            else:
+                qty_type = 'count'
+                subsub_list = subcat_val
+            s_cursor = db.execute(
+                'INSERT INTO subcats (subcat, quantity_type, category_id, auth_id) VALUES (?, ?, ?, ?)',
+                (subcat_name, qty_type, cat_id, user_id)
+            )
             subcat_id = s_cursor.lastrowid
-            for subsub_name in subsubs:
+            for subsub_name in subsub_list:
                 db.execute('INSERT INTO subsub (subsub, subcat_id, auth_id) VALUES (?, ?, ?)', (subsub_name, subcat_id, user_id))
     db.commit()

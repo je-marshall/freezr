@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (checkinBtn && checkinModal) {
         checkinBtn.addEventListener('click', () => checkinModal.showModal());
     }
-    
+
     if (closeBtn) closeBtn.addEventListener('click', (e) => { e.preventDefault(); checkinModal.close(); });
     if (cancelBtn) cancelBtn.addEventListener('click', (e) => { e.preventDefault(); checkinModal.close(); });
 
@@ -18,9 +18,9 @@ document.addEventListener('DOMContentLoaded', function() {
     const subsubs = window.freezrData ? window.freezrData.subsubs : [];
 
     const catRules = {
-        1: ['skin', 'bone', 'minced', 'cooked'], 
+        1: ['skin', 'bone', 'minced', 'cooked'],
         2: ['grated'],
-        3: ['cooked'], 
+        3: ['cooked'],
         4: ['skin', 'bone', 'minced', 'cooked'],
         5: []
     };
@@ -31,10 +31,57 @@ document.addEventListener('DOMContentLoaded', function() {
     const subcatContainer = document.getElementById('subcat-container');
     const subsubContainer = document.getElementById('subsub-container');
 
+    // --- 3. Quantity input ---
+    const qtyNumber = document.getElementById('qty-number');
+    const qtyUnit   = document.getElementById('qty-unit');
+    const qtyHidden = document.getElementById('qty-hidden');
+
+    let currentQtyType = 'count';
+
+    const WEIGHT_UNITS  = [['g','g'],['kg','kg']];
+    const VOLUME_UNITS  = [['ml','ml'],['L','L']];
+
+    function setUnitOptions(pairs) {
+        qtyUnit.innerHTML = pairs.map(([v, l]) => `<option value="${v}">${l}</option>`).join('');
+    }
+
+    function updateQtyHidden() {
+        if (!qtyHidden) return;
+        const num  = qtyNumber ? qtyNumber.value : '1';
+        const unit = (qtyUnit && qtyUnit.style.display !== 'none') ? qtyUnit.value : '';
+        qtyHidden.value = num + unit;
+    }
+
+    function applyQtyType(qtyType) {
+        if (!qtyNumber || !qtyUnit || !qtyHidden) return;
+        if (qtyType !== currentQtyType) {
+            if (qtyType === 'weight') { qtyNumber.value = '500'; }
+            else if (qtyType === 'volume') { qtyNumber.value = '500'; }
+            else { qtyNumber.value = '1'; }
+        }
+        currentQtyType = qtyType;
+        if (qtyType === 'weight') {
+            setUnitOptions(WEIGHT_UNITS);
+            qtyUnit.style.display = '';
+            qtyNumber.step = 'any'; qtyNumber.min = '0';
+        } else if (qtyType === 'volume') {
+            setUnitOptions(VOLUME_UNITS);
+            qtyUnit.style.display = '';
+            qtyNumber.step = 'any'; qtyNumber.min = '0';
+        } else {
+            qtyUnit.style.display = 'none';
+            qtyNumber.step = '1'; qtyNumber.min = '1';
+        }
+        updateQtyHidden();
+    }
+
+    if (qtyNumber) qtyNumber.addEventListener('input', updateQtyHidden);
+    if (qtyUnit)   qtyUnit.addEventListener('change', updateQtyHidden);
+
     if (catSelect) {
         catSelect.addEventListener('change', function() {
             const catId = this.value;
-            
+
             document.querySelectorAll('.cs-checkbox').forEach(cb => {
                 cb.checked = false;
                 cb.parentElement.style.display = 'none';
@@ -49,7 +96,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             subcatSelect.innerHTML = '<option value="">-- Select Sub-Category --</option>';
             const filteredSubcats = subcats.filter(sc => sc.category_id == catId);
-            
+
             if (filteredSubcats.length > 0) {
                 filteredSubcats.forEach(sc => {
                     const opt = document.createElement('option');
@@ -61,8 +108,9 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 if(subcatContainer) subcatContainer.style.display = 'none';
             }
-            
+
             if(subsubContainer) subsubContainer.style.display = 'none';
+            applyQtyType('count');
         });
     }
 
@@ -71,7 +119,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const subcatId = this.value;
             subsubSelect.innerHTML = '<option value="">-- Select Type --</option>';
             const filteredSubsubs = subsubs.filter(ss => ss.subcat_id == subcatId);
-            
+
             if (filteredSubsubs.length > 0) {
                 filteredSubsubs.forEach(ss => {
                     const opt = document.createElement('option');
@@ -83,6 +131,9 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 if(subsubContainer) subsubContainer.style.display = 'none';
             }
+
+            const selectedSubcat = subcats.find(sc => sc.id == subcatId);
+            applyQtyType(selectedSubcat ? (selectedSubcat.quantity_type || 'count') : 'count');
         });
     }
 
@@ -94,7 +145,7 @@ document.addEventListener('DOMContentLoaded', function() {
             drawerSelect.innerHTML = '<option value="">-- Select Drawer --</option>';
             const selectedOption = this.options[this.selectedIndex];
             const drawers = parseInt(selectedOption.getAttribute('data-drawers')) || 0;
-            
+
             for (let i = 1; i <= drawers; i++) {
                 const opt = document.createElement('option');
                 opt.value = i;
@@ -104,11 +155,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // --- 3. Form Submission with BACKEND Print Support ---
+    // --- 4. Form Submission with BACKEND Print Support ---
     if (checkinForm) {
         checkinForm.addEventListener('submit', async function(e) {
             e.preventDefault();
-            
+            updateQtyHidden();
+
             // Determine item description for the physical label
             let itemDescription = 'UNKNOWN ITEM';
             if (subcatSelect && subcatSelect.value) {
@@ -117,30 +169,25 @@ document.addEventListener('DOMContentLoaded', function() {
                     itemDescription += ' ' + subsubSelect.options[subsubSelect.selectedIndex].text;
                 }
             }
-            const qtyInput = checkinForm.querySelector('[name="quantity"]');
-            const qty = qtyInput ? qtyInput.value.trim() : '1';
+            const qty = qtyHidden ? qtyHidden.value.trim() : '1';
             const qtyPrefix = /^\d+$/.test(qty) ? qty + 'x' : qty;
             itemDescription = qtyPrefix + ' ' + itemDescription;
 
             const formData = new FormData(checkinForm);
-            
+
             try {
-                // 1. Send the database check-in command
                 const response = await fetch(checkinForm.action, {
                     method: 'POST',
                     body: formData,
                     headers: { 'Accept': 'application/json' }
                 });
-                
+
                 const result = await response.json();
 
                 if (result.success) {
-                    // 2. If the user checked "Print Label", securely AWAIT the backend printer API
                     if (formData.get('print_label') && typeof window.triggerPrint === "function") {
                         await window.triggerPrint(result.entry_id, itemDescription);
                     }
-                    
-                    // 3. Reload instantly AFTER the print command has successfully cleared the network
                     window.location.reload();
                 } else {
                     alert('Error saving item: ' + (result.message || 'Unknown error'));
