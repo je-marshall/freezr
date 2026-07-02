@@ -1,4 +1,5 @@
 import os
+import logging
 from flask import Flask
 
 def create_app(test_config=None):
@@ -11,6 +12,13 @@ def create_app(test_config=None):
         app.config.from_pyfile('config.py', silent=True)
     else:
         app.config.from_mapping(test_config)
+
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='%(asctime)s %(name)s %(levelname)s %(message)s',
+    )
+    app.logger.setLevel(logging.DEBUG)
+    app.logger.info('Freezr starting up, db=%s', app.config['DATABASE'])
     try:
         os.makedirs(app.instance_path)
     except OSError:
