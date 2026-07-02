@@ -153,8 +153,9 @@
                 <label style="display: block; font-weight: bold; margin-bottom: 5px;">Notes:</label>
                 <textarea id="view-notes" class="cs-input" disabled rows="2" style="width: 100%; color: white !important; opacity: 1; resize: none;"></textarea>
             </div>
-            <div style="display: flex; justify-content: space-between; gap: 10px; margin-top: 20px;">
+            <div style="display: flex; justify-content: space-between; gap: 10px; margin-top: 20px; flex-wrap: wrap;">
                 <button type="button" id="btn-print-init" class="cs-btn" style="flex: 1; font-weight: bold; padding: 10px;">PRINT</button>
+                <button type="button" id="btn-copy-init" class="cs-btn" style="flex: 1; font-weight: bold; padding: 10px;">COPY</button>
                 <button type="button" id="btn-move-init" class="cs-btn" style="flex: 1; font-weight: bold; padding: 10px;">MOVE</button>
                 <button type="button" id="btn-checkout-init" class="cs-btn" style="flex: 1; font-weight: bold; padding: 10px;">CHECK OUT</button>
             </div>
@@ -203,6 +204,56 @@
                 <input type="hidden" name="entry_id" id="checkout-entry-id">
                 <button type="button" id="btn-cancel-confirm" class="cs-btn" style="flex: 1;">Cancel</button>
                 <button type="submit" class="cs-btn danger" style="flex: 1;">Check Out</button>
+            </form>
+        </div>
+    </dialog>
+
+    <dialog id="copy-modal" class="cs-dialog">
+        <div class="heading">
+            <div class="wrapper"><div class="icon"></div><p class="text" id="copy-header-title" style="font-weight: bold;">Copy Item</p></div>
+            <button id="btn-close-copy" class="cs-btn close"></button>
+        </div>
+        <div class="content" style="padding: 20px; text-align: left;">
+            <form id="copy-form" method="POST" action="{{ url_for('checkin.checkin') }}" style="display: flex; flex-direction: column; gap: 15px;">
+                <input type="hidden" name="category" id="copy-category">
+                <input type="hidden" name="subcat" id="copy-subcat">
+                <input type="hidden" name="subsub" id="copy-subsub">
+                <input type="hidden" name="skin" id="copy-skin">
+                <input type="hidden" name="bone" id="copy-bone">
+                <input type="hidden" name="minced" id="copy-minced">
+                <input type="hidden" name="grated" id="copy-grated">
+                <input type="hidden" name="cooked" id="copy-cooked">
+                <input type="hidden" name="notes" id="copy-notes">
+                <div>
+                    <label style="display: block; font-weight: bold; margin-bottom: 5px;">Qty:</label>
+                    <input type="text" name="quantity" id="copy-quantity" class="cs-input" style="width: 100%;">
+                </div>
+                <div>
+                    <label style="display: block; font-weight: bold; margin-bottom: 5px;">Location:</label>
+                    <select id="copy-freezer" name="freezer" required class="cs-select" style="width: 100%;">
+                        <option value="">-- Freezer --</option>
+                        {% for freezer in freezers %}
+                            <option value="{{ freezer.id }}" data-drawers="{{ freezer.drawers }}">{{ freezer.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label style="display: block; font-weight: bold; margin-bottom: 5px;">Drawer:</label>
+                    <select id="copy-drawer" name="drawer" required class="cs-select" style="width: 100%;"></select>
+                </div>
+                <div>
+                    <label style="display: block; font-weight: bold; margin-bottom: 5px;">Date added: <span style="font-weight: normal; opacity: 0.7;">(leave blank for today)</span></label>
+                    <input type="date" name="date_added" class="cs-input" style="width: 100%;">
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+                    <label style="font-weight: bold; cursor: pointer;">
+                        <input type="checkbox" name="print_label" value="1" checked> Print QR Label
+                    </label>
+                    <div style="display: flex; gap: 10px;">
+                        <button id="btn-cancel-copy" type="button" class="cs-btn">Cancel</button>
+                        <button type="submit" class="cs-btn">Save Copy</button>
+                    </div>
+                </div>
             </form>
         </div>
     </dialog>

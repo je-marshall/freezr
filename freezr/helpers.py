@@ -8,14 +8,15 @@ from freezr.db import get_db
 def get_all_entries():
     db = get_db()
     all_entries = db.execute('''
-        SELECT e.id, e.created, e.quantity, e.skin, e.bone, 
+        SELECT e.id, e.created, e.quantity, e.skin, e.bone,
                e.minced, e.grated, e.cooked, e.notes, e.auth_id,
+               e.category_id, e.subcat_id, e.subsub AS subsub_id, e.freezer_id,
                c.category, s.subcat, u.subsub,
                f.name AS freezer_name, e.drawer
-        FROM entries e 
-        JOIN categories c ON e.category_id = c.id 
-        JOIN subcats s ON e.subcat_id = s.id 
-        LEFT JOIN subsub u ON e.subsub = u.id 
+        FROM entries e
+        JOIN categories c ON e.category_id = c.id
+        JOIN subcats s ON e.subcat_id = s.id
+        LEFT JOIN subsub u ON e.subsub = u.id
         JOIN freezers f ON e.freezer_id = f.id
         WHERE e.auth_id = ?
         ORDER BY e.created DESC
@@ -26,14 +27,15 @@ def get_entry(id, check_author=True):
     db = get_db()
     entry = db.execute(
         '''
-        SELECT e.id, e.created, e.quantity, e.skin, e.bone, 
+        SELECT e.id, e.created, e.quantity, e.skin, e.bone,
                e.minced, e.grated, e.cooked, e.notes, e.auth_id,
+               e.category_id, e.subcat_id, e.subsub AS subsub_id, e.freezer_id,
                c.category, s.subcat, u.subsub,
                f.name AS freezer_name, e.drawer
-        FROM entries e 
-        JOIN categories c ON e.category_id = c.id 
-        JOIN subcats s ON e.subcat_id = s.id 
-        LEFT JOIN subsub u ON e.subsub = u.id 
+        FROM entries e
+        JOIN categories c ON e.category_id = c.id
+        JOIN subcats s ON e.subcat_id = s.id
+        LEFT JOIN subsub u ON e.subsub = u.id
         JOIN freezers f ON e.freezer_id = f.id
         WHERE e.id = ?
         ''',

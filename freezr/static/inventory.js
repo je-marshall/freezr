@@ -93,7 +93,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // --- 4. Checkout (Delete) Logic ---
+    // --- 4. Copy / Checkout / Move Logic ---
+    // --- Checkout (Delete) ---
     const btnCheckoutInit = document.getElementById('btn-checkout-init');
     const confirmModal = document.getElementById('confirm-delete-modal');
     if (btnCheckoutInit) {
@@ -106,7 +107,79 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('btn-close-confirm')?.addEventListener('click', closeConfirm);
     document.getElementById('btn-cancel-confirm')?.addEventListener('click', closeConfirm);
 
-    // --- 5. Move Item Logic ---
+    // --- 5. Copy Item Logic ---
+    const btnCopyInit  = document.getElementById('btn-copy-init');
+    const copyModal    = document.getElementById('copy-modal');
+    const copyForm     = document.getElementById('copy-form');
+    const copyFreezer  = document.getElementById('copy-freezer');
+    const copyDrawer   = document.getElementById('copy-drawer');
+
+    if (btnCopyInit) {
+        btnCopyInit.addEventListener('click', () => {
+            if (!currentEntry) return;
+            document.getElementById('copy-header-title').innerText = currentEntry.desc.toUpperCase();
+            document.getElementById('copy-category').value = currentEntry.category_id;
+            document.getElementById('copy-subcat').value   = currentEntry.subcat_id;
+            document.getElementById('copy-subsub').value   = currentEntry.subsub_id || '';
+            document.getElementById('copy-skin').value     = currentEntry.skin   ? '1' : '';
+            document.getElementById('copy-bone').value     = currentEntry.bone   ? '1' : '';
+            document.getElementById('copy-minced').value   = currentEntry.minced ? '1' : '';
+            document.getElementById('copy-grated').value   = currentEntry.grated ? '1' : '';
+            document.getElementById('copy-cooked').value   = currentEntry.cooked ? '1' : '';
+            document.getElementById('copy-notes').value    = currentEntry.notes  || '';
+            document.getElementById('copy-quantity').value = currentEntry.quantity;
+            // Reset location fields
+            if (copyFreezer) copyFreezer.value = '';
+            if (copyDrawer)  copyDrawer.innerHTML = '<option value="">-- Select Drawer --</option>';
+            viewModal.close();
+            copyModal.showModal();
+        });
+    }
+
+    const closeCopy = (e) => { e.preventDefault(); copyModal.close(); };
+    document.getElementById('btn-close-copy')?.addEventListener('click', closeCopy);
+    document.getElementById('btn-cancel-copy')?.addEventListener('click', closeCopy);
+
+    if (copyFreezer && copyDrawer) {
+        copyFreezer.addEventListener('change', function() {
+            copyDrawer.innerHTML = '<option value="">-- Select Drawer --</option>';
+            if (!this.value) return;
+            const numDrawers = parseInt(this.options[this.selectedIndex].getAttribute('data-drawers')) || 4;
+            for (let i = 1; i <= numDrawers; i++) {
+                copyDrawer.innerHTML += `<option value="${i}">${i}</option>`;
+            }
+        });
+    }
+
+    if (copyForm) {
+        copyForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const formData = new FormData(copyForm);
+            try {
+                const response = await fetch(copyForm.action, {
+                    method: 'POST',
+                    body: formData,
+                    headers: { 'Accept': 'application/json' }
+                });
+                const result = await response.json();
+                if (result.success) {
+                    if (formData.get('print_label') && typeof window.triggerPrint === 'function') {
+                        const qty = formData.get('quantity') || '1';
+                        const qtyPrefix = /^\d+$/.test(qty) ? qty + 'x' : qty;
+                        await window.triggerPrint(result.entry_id, qtyPrefix + ' ' + (currentEntry ? currentEntry.desc.replace(/^\S+\s/, '') : ''));
+                    }
+                    window.location.reload();
+                } else {
+                    alert('Error saving copy: ' + (result.message || 'Unknown error'));
+                }
+            } catch (err) {
+                console.error('Copy failed:', err);
+                alert('A server error occurred.');
+            }
+        });
+    }
+
+    // --- 6. Move Item Logic ---
     const btnMoveInit = document.getElementById('btn-move-init');
     const moveModal = document.getElementById('move-modal');
     if (btnMoveInit) {
