@@ -39,6 +39,47 @@
     border-right-color: #e74c3c !important;
 }
 
+/* --- MOBILE RESPONSIVE --- */
+
+@media (max-width: 600px) {
+    /* Nav: hide the long subtitle */
+    .nav-subtitle { display: none; }
+
+    nav, section.content {
+        width: 100% !important;
+        padding: 0 8px;
+        box-sizing: border-box;
+    }
+
+    nav {
+        margin: 12px auto !important;
+    }
+
+    /* Dialogs: full width, scrollable, anchored to top */
+    .cs-dialog {
+        min-width: unset !important;
+        width: calc(100vw - 16px) !important;
+        max-width: calc(100vw - 16px) !important;
+        left: 8px !important;
+        right: 8px !important;
+        top: 8px !important;
+        max-height: calc(100vh - 16px);
+        overflow-y: auto;
+        box-sizing: border-box;
+    }
+
+    /* Selects: remove fixed min-width so they fill their container */
+    .cs-select {
+        min-width: unset !important;
+        width: 100%;
+    }
+
+    /* Inventory list: use more of the short mobile viewport */
+    .scroll-container {
+        max-height: 72vh !important;
+    }
+}
+
 /* --- PRINT MEDIA QUERIES FOR BROTHER QL-700 LABELS --- */
 
 #print-area {

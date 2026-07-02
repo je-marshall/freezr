@@ -94,16 +94,16 @@
                     <label id="lbl-grated" style="display:none;"><input type="checkbox" name="grated" value="1"> Grated</label>
                     <label id="lbl-cooked" style="display:none;"><input type="checkbox" name="cooked" value="1"> Cooked</label>
                 </div>
+                <div>
+                    <label style="display: block; font-weight: bold; margin-bottom: 5px;">Location:</label>
+                    <select id="freezer" name="freezer" required class="cs-select" style="width: 100%;">
+                        <option value="">-- Freezer --</option>
+                        {% for freezer in freezers %}
+                            <option value="{{ freezer.id }}" data-drawers="{{ freezer.drawers }}">{{ freezer.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
                 <div style="display: flex; gap: 10px;">
-                    <div style="flex: 2;">
-                        <label style="display: block; font-weight: bold; margin-bottom: 5px;">Location:</label>
-                        <select id="freezer" name="freezer" required class="cs-select" style="width: 100%;">
-                            <option value="">-- Freezer --</option>
-                            {% for freezer in freezers %}
-                                <option value="{{ freezer.id }}" data-drawers="{{ freezer.drawers }}">{{ freezer.name }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
                     <div style="flex: 1;">
                         <label style="display: block; font-weight: bold; margin-bottom: 5px;">Drawer:</label>
                         <select id="drawer" name="drawer" required class="cs-select" style="width: 100%;"></select>
