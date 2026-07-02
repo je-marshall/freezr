@@ -98,17 +98,20 @@ def create_label_image(entry_id, description, date_str, label_size='62x29'):
     if line:
         lines.append(' '.join(line))
 
+    # Date pinned to bottom
+    _, _, _, date_h = draw.textbbox((0, 0), date_str, font=f_date)
+    date_y = height - BORDER - PAD - date_h
+    draw.text((text_x, date_y), date_str, font=f_date, fill='#444444')
+
+    # Description vertically centred in remaining space above date
     line_h = 44
     total_h = len(lines) * line_h
-    desc_y = (height * 2 // 3 - total_h) // 2
+    desc_top = BORDER + PAD
+    desc_available = date_y - PAD - desc_top
+    desc_y = desc_top + (desc_available - total_h) // 2
     for l in lines:
         draw.text((text_x, desc_y), l, font=f_desc, fill='black')
         desc_y += line_h
-
-    # Horizontal rule then date
-    rule_y = height * 2 // 3
-    draw.line([(text_x, rule_y), (div_x - PAD, rule_y)], fill='#aaaaaa', width=1)
-    draw.text((text_x, rule_y + 8), date_str, font=f_date, fill='#444444')
 
     log.debug('Label image created (%dx%d)', width, height)
     return img
