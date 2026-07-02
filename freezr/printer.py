@@ -52,10 +52,12 @@ def create_label_image(entry_id, description, date_str, label_size='62x29'):
     bold_path    = _find_font("LiberationSans-Bold.ttf")
     regular_path = _find_font("LiberationSans-Regular.ttf")
     try:
+        if not bold_path or not regular_path:
+            raise FileNotFoundError
         font_large = ImageFont.truetype(bold_path, 42)
         font_small = ImageFont.truetype(regular_path, 28)
         log.debug('Loaded Liberation fonts from %s', os.path.dirname(bold_path))
-    except (IOError, TypeError):
+    except (IOError, OSError):
         log.warning('Liberation fonts not found — falling back to default')
         font_large = ImageFont.load_default()
         font_small = ImageFont.load_default()
