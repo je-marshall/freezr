@@ -37,18 +37,25 @@ ${BOLD}ARGUMENTS${RESET}
   <device>    SD card block device (e.g. /dev/sdb, /dev/mmcblk0)
 
 ${BOLD}OPTIONS${RESET}
-  --hostname  Hostname for the Pi          (default: freezr → freezr.local)
-  --pi-pass   Password for the pi user     (default: raspberry — change this!)
-  --ssid      WiFi network name
-  --pass      WiFi password                (required if --ssid is set)
-  --bake      Install Freezr now via QEMU chroot — first boot goes straight
-              to a running service with no wait. Requires qemu-user-static:
-                sudo dnf install qemu-user-static
-  -h, --help  Show this help
+  --hostname NAME   Hostname for the Pi              (default: freezr → freezr.local)
+  --ssh-user NAME   SSH/system username              (default: pi)
+  --ssh-pass PASS   SSH/system password              (default: raspberry — change this!)
+  --ip ADDR         Static IP address                (default: DHCP)
+                    Accepts plain IP or CIDR, e.g. 192.168.1.100 or 192.168.1.100/24
+                    Gateway defaults to x.x.x.1 of the given address
+  --ssid NAME       WiFi network name
+  --pass PASS       WiFi password                    (required if --ssid is set)
+  --bake            Install Freezr now via QEMU chroot — first boot goes straight
+                    to a running service with no wait. Requires qemu-user-static:
+                      sudo dnf install qemu-user-static
+  -h, --help        Show this help
 
 ${BOLD}EXAMPLES${RESET}
   sudo $0 raspios-bookworm-arm64-lite.img.xz /dev/sdb
   sudo $0 raspios-bookworm-armhf-lite.img.xz /dev/sdb --ssid MyWifi --pass x --bake
+  sudo $0 raspios-bookworm-arm64-lite.img.xz /dev/sdb \\
+      --hostname freezr --ssh-user pi --ssh-pass secret \\
+      --ip 192.168.1.50 --ssid MyWifi --pass x
 
 ${BOLD}NOTE${RESET}
   Pi Zero / Zero W requires the 32-bit armhf image (Bookworm or earlier).
@@ -63,14 +70,19 @@ POSITIONAL=()
 WIFI_SSID=""
 WIFI_PASS=""
 HOSTNAME="freezr"
-PI_PASS="raspberry"
+SSH_USER="pi"
+SSH_PASS="raspberry"
+STATIC_IP=""
 BAKE=0
 
 while [[ $# -gt 0 ]]; do
     case $1 in
         -h|--help)     usage; exit 0 ;;
         --hostname)    HOSTNAME="$2"; shift 2 ;;
-        --pi-pass)     PI_PASS="$2"; shift 2 ;;
+        --ssh-user)    SSH_USER="$2"; shift 2 ;;
+        --ssh-pass)    SSH_PASS="$2"; shift 2 ;;
+        --pi-pass)     SSH_PASS="$2"; shift 2 ;;   # legacy alias
+        --ip)          STATIC_IP="$2"; shift 2 ;;
         --ssid)        WIFI_SSID="$2"; shift 2 ;;
         --pass)        WIFI_PASS="$2"; shift 2 ;;
         --bake)        BAKE=1; shift ;;
@@ -106,6 +118,14 @@ if [ "$BAKE" = "1" ]; then
     fi
 fi
 
+# Normalise static IP — add /24 prefix if omitted, compute default gateway
+STATIC_GW=""
+if [ -n "$STATIC_IP" ]; then
+    IP_ADDR="${STATIC_IP%%/*}"
+    [[ "$STATIC_IP" != */* ]] && STATIC_IP="${STATIC_IP}/24"
+    STATIC_GW="${IP_ADDR%.*}.1"
+fi
+
 # ── Plan summary ──────────────────────────────────────────────────────────────
 echo -e "\n${BOLD}┌─────────────────────────────────────────┐${RESET}"
 echo -e "${BOLD}│           Freezr SD Card Setup          │${RESET}"
@@ -113,6 +133,9 @@ echo -e "${BOLD}└────────────────────�
 echo -e "  Image    : ${DIM}$(basename "$IMAGE")${RESET}"
 echo -e "  Device   : ${DIM}$DEVICE${RESET}"
 echo -e "  Hostname : ${DIM}${HOSTNAME}.local${RESET}"
+echo -e "  SSH User : ${DIM}${SSH_USER}${RESET}"
+[ -n "$STATIC_IP" ] && echo -e "  IP       : ${DIM}${STATIC_IP} (static, gateway ${STATIC_GW})${RESET}" \
+                     || echo -e "  IP       : ${DIM}DHCP${RESET}"
 [ -n "$WIFI_SSID" ] && echo -e "  WiFi     : ${DIM}$WIFI_SSID${RESET}"
 [ "$BAKE" = "1" ]   && echo -e "  Mode     : ${DIM}bake (QEMU chroot install)${RESET}" \
                      || echo -e "  Mode     : ${DIM}first-boot install${RESET}"
@@ -231,14 +254,14 @@ keyboard:
   layout: gb
 
 users:
-  - name: pi
+  - name: ${SSH_USER}
     gecos: Pi User
     groups: [adm, dialout, cdrom, sudo, audio, video, plugdev, games, users,
              input, netdev, spi, i2c, gpio, lp]
     sudo: ALL=(ALL) NOPASSWD:ALL
     shell: /bin/bash
     lock_passwd: false
-    plain_text_passwd: "${PI_PASS}"
+    plain_text_passwd: "${SSH_PASS}"
 
 ssh_pwauth: true
 
@@ -246,10 +269,35 @@ runcmd:
   - [ systemctl, enable, --now, ssh ]
 EOF
 
-    # network-config: netplan format; cloud-init applies this before NM starts,
-    # so the regulatory-domain is set correctly and rfkill doesn't block WiFi
+    # network-config: netplan format; cloud-init applies this before NM starts.
+    # Static IP is applied to wlan0 if WiFi is configured, otherwise to eth0.
     if [ -n "$WIFI_SSID" ]; then
-        cat > "$BOOT_MNT/network-config" << EOF
+        if [ -n "$STATIC_IP" ]; then
+            cat > "$BOOT_MNT/network-config" << EOF
+network:
+  version: 2
+  ethernets:
+    eth0:
+      dhcp4: true
+      optional: true
+  wifis:
+    wlan0:
+      dhcp4: false
+      optional: true
+      regulatory-domain: GB
+      addresses:
+        - ${STATIC_IP}
+      routes:
+        - to: default
+          via: ${STATIC_GW}
+      nameservers:
+        addresses: [8.8.8.8, 1.1.1.1]
+      access-points:
+        "${WIFI_SSID}":
+          password: "${WIFI_PASS}"
+EOF
+        else
+            cat > "$BOOT_MNT/network-config" << EOF
 network:
   version: 2
   ethernets:
@@ -265,8 +313,26 @@ network:
         "${WIFI_SSID}":
           password: "${WIFI_PASS}"
 EOF
+        fi
     else
-        cat > "$BOOT_MNT/network-config" << EOF
+        if [ -n "$STATIC_IP" ]; then
+            cat > "$BOOT_MNT/network-config" << EOF
+network:
+  version: 2
+  ethernets:
+    eth0:
+      dhcp4: false
+      optional: true
+      addresses:
+        - ${STATIC_IP}
+      routes:
+        - to: default
+          via: ${STATIC_GW}
+      nameservers:
+        addresses: [8.8.8.8, 1.1.1.1]
+EOF
+        else
+            cat > "$BOOT_MNT/network-config" << EOF
 network:
   version: 2
   ethernets:
@@ -274,6 +340,7 @@ network:
       dhcp4: true
       optional: true
 EOF
+        fi
     fi
 
     # Changing instance_id ensures cloud-init treats this as a fresh instance
@@ -283,7 +350,7 @@ instance_id: freezr-$(date +%s)
 dsmode: local
 EOF
 
-    step "cloud-init files written (hostname, user, SSH$([ -n "$WIFI_SSID" ] && echo ", WiFi"))"
+    step "cloud-init files written (hostname, user, SSH$([ -n "$WIFI_SSID" ] && echo ", WiFi")$([ -n "$STATIC_IP" ] && echo ", static IP"))"
 
 else
 
@@ -307,8 +374,8 @@ config_version = 1
 hostname = "${HOSTNAME}"
 
 [user]
-name = "pi"
-password = "${PI_PASS}"
+name = "${SSH_USER}"
+password = "${SSH_PASS}"
 password_encrypted = false
 
 [ssh]
@@ -327,6 +394,60 @@ EOF
     fi
 
     step "custom.toml + cmdline.txt written (hostname, user, SSH$([ -n "$WIFI_SSID" ] && echo ", WiFi"))"
+
+    # Static IP via NetworkManager keyfile written directly into rootfs.
+    # Applied to wlan0 if WiFi is configured, otherwise to eth0.
+    if [ -n "$STATIC_IP" ]; then
+        NM_DIR="$ROOT_MNT/etc/NetworkManager/system-connections"
+        mkdir -p "$NM_DIR"
+        if [ -n "$WIFI_SSID" ]; then
+            cat > "$NM_DIR/wlan0.nmconnection" << EOF
+[connection]
+id=wlan0
+type=wifi
+interface-name=wlan0
+
+[wifi]
+mode=infrastructure
+ssid=${WIFI_SSID}
+
+[wifi-security]
+auth-alg=open
+key-mgmt=wpa-psk
+psk=${WIFI_PASS}
+
+[ipv4]
+method=manual
+addresses=${STATIC_IP}
+gateway=${STATIC_GW}
+dns=8.8.8.8;1.1.1.1;
+
+[ipv6]
+method=auto
+EOF
+            chmod 600 "$NM_DIR/wlan0.nmconnection"
+        else
+            cat > "$NM_DIR/eth0.nmconnection" << EOF
+[connection]
+id=eth0
+type=ethernet
+interface-name=eth0
+
+[ethernet]
+
+[ipv4]
+method=manual
+addresses=${STATIC_IP}
+gateway=${STATIC_GW}
+dns=8.8.8.8;1.1.1.1;
+
+[ipv6]
+method=auto
+EOF
+            chmod 600 "$NM_DIR/eth0.nmconnection"
+        fi
+        step "Static IP configured: ${STATIC_IP} (gateway ${STATIC_GW})"
+    fi
 
 fi
 
@@ -380,7 +501,7 @@ if [ "$BAKE" = "1" ]; then
     header "Installing Freezr (chroot) — this will take a few minutes"
     info "Note the Freezr password printed below."
     echo ""
-    chroot "$ROOT_MNT" /bin/bash << 'CHROOT'
+    SSH_USER="$SSH_USER" chroot "$ROOT_MNT" /bin/bash << 'CHROOT'
 set -e
 export DEBIAN_FRONTEND=noninteractive
 export FLASK_APP=freezr
@@ -391,24 +512,24 @@ apt-get install -y \
     gcc git sqlite3 \
     libusb-1.0-0-dev libjpeg-dev zlib1g-dev libfreetype6-dev fonts-liberation
 
-usermod -a -G lp,plugdev pi
+usermod -a -G lp,plugdev "$SSH_USER"
 
-git clone https://github.com/je-marshall/freezr.git /home/pi/freezr
-cd /home/pi/freezr
+git clone https://github.com/je-marshall/freezr.git "/home/$SSH_USER/freezr"
+cd "/home/$SSH_USER/freezr"
 python3 -m venv venv
 venv/bin/pip install --upgrade pip wheel
 venv/bin/pip install -e .
 venv/bin/flask init-db
 
-chown -R 1000:1000 /home/pi/freezr
+chown -R "$SSH_USER:$SSH_USER" "/home/$SSH_USER/freezr"
 CHROOT
     echo ""
 
     header "Enabling Freezr service"
-    sed -e "s|__USER__|pi|g" \
-        -e "s|__APP_DIR__|/home/pi/freezr|g" \
-        -e "s|__VENV_DIR__|/home/pi/freezr/venv|g" \
-        "$ROOT_MNT/home/pi/freezr/freezr.service" > "$ROOT_MNT/etc/systemd/system/freezr.service"
+    sed -e "s|__USER__|${SSH_USER}|g" \
+        -e "s|__APP_DIR__|/home/${SSH_USER}/freezr|g" \
+        -e "s|__VENV_DIR__|/home/${SSH_USER}/freezr/venv|g" \
+        "$ROOT_MNT/home/${SSH_USER}/freezr/freezr.service" > "$ROOT_MNT/etc/systemd/system/freezr.service"
     mkdir -p "$ROOT_MNT/etc/systemd/system/multi-user.target.wants"
     ln -sf /etc/systemd/system/freezr.service \
         "$ROOT_MNT/etc/systemd/system/multi-user.target.wants/freezr.service"
@@ -418,31 +539,31 @@ else
 
     header "Writing first-boot installer"
 
-    cat > "$ROOT_MNT/opt/freezr-setup.sh" << 'SETUP'
+    cat > "$ROOT_MNT/opt/freezr-setup.sh" << SETUP
 #!/bin/bash
 set -e
 
 apt-get update -y
-apt-get install -y \
-    python3-venv python3-dev python3-pip \
-    gcc git sqlite3 \
+apt-get install -y \\
+    python3-venv python3-dev python3-pip \\
+    gcc git sqlite3 \\
     libusb-1.0-0-dev libjpeg-dev zlib1g-dev libfreetype6-dev fonts-liberation
 
-usermod -a -G lp,plugdev pi
+usermod -a -G lp,plugdev ${SSH_USER}
 
-git clone https://github.com/je-marshall/freezr.git /home/pi/freezr
-cd /home/pi/freezr
-sudo -u pi python3 -m venv venv
-sudo -u pi venv/bin/pip install --upgrade pip wheel
-sudo -u pi venv/bin/pip install -e .
+git clone https://github.com/je-marshall/freezr.git /home/${SSH_USER}/freezr
+cd /home/${SSH_USER}/freezr
+sudo -u ${SSH_USER} python3 -m venv venv
+sudo -u ${SSH_USER} venv/bin/pip install --upgrade pip wheel
+sudo -u ${SSH_USER} venv/bin/pip install -e .
 
 export FLASK_APP=freezr
-sudo -u pi venv/bin/flask init-db
+sudo -u ${SSH_USER} venv/bin/flask init-db
 
-sed -e "s|__USER__|pi|g" \
-    -e "s|__APP_DIR__|/home/pi/freezr|g" \
-    -e "s|__VENV_DIR__|/home/pi/freezr/venv|g" \
-    /home/pi/freezr/freezr.service > /etc/systemd/system/freezr.service
+sed -e "s|__USER__|${SSH_USER}|g" \\
+    -e "s|__APP_DIR__|/home/${SSH_USER}/freezr|g" \\
+    -e "s|__VENV_DIR__|/home/${SSH_USER}/freezr/venv|g" \\
+    /home/${SSH_USER}/freezr/freezr.service > /etc/systemd/system/freezr.service
 
 systemctl daemon-reload
 systemctl enable freezr
@@ -456,7 +577,7 @@ SETUP
 
     chmod +x "$ROOT_MNT/opt/freezr-setup.sh"
 
-    cat > "$ROOT_MNT/etc/systemd/system/freezr-setup.service" << 'SERVICE'
+    cat > "$ROOT_MNT/etc/systemd/system/freezr-setup.service" << SERVICE
 [Unit]
 Description=Freezr First Boot Setup
 After=network-online.target
@@ -466,8 +587,8 @@ ConditionPathExists=/opt/freezr-setup.sh
 [Service]
 Type=oneshot
 ExecStart=/bin/bash /opt/freezr-setup.sh
-StandardOutput=append:/home/pi/freezr-setup.log
-StandardError=append:/home/pi/freezr-setup.log
+StandardOutput=append:/home/${SSH_USER}/freezr-setup.log
+StandardError=append:/home/${SSH_USER}/freezr-setup.log
 TimeoutStartSec=1800
 
 [Install]
@@ -477,7 +598,7 @@ SERVICE
     mkdir -p "$ROOT_MNT/etc/systemd/system/multi-user.target.wants"
     ln -sf /etc/systemd/system/freezr-setup.service \
         "$ROOT_MNT/etc/systemd/system/multi-user.target.wants/freezr-setup.service"
-    step "First-boot service installed"
+    step "First-boot service installed (log: /home/${SSH_USER}/freezr-setup.log)"
 
 fi
 
@@ -508,10 +629,12 @@ echo -e "${BOLD}${GREEN}└─────────────────�
 if [ "$BAKE" = "1" ]; then
     echo -e "  Eject the SD card and insert it into your Pi."
     echo -e "  Freezr will be up at ${BOLD}http://${HOSTNAME}.local:8000${RESET} once it has booted."
+    [ -n "$STATIC_IP" ] && echo -e "  Also reachable at ${BOLD}http://${IP_ADDR}:8000${RESET}"
 else
     echo -e "  Eject the SD card and insert it into your Pi."
     echo -e "  First boot will take ${BOLD}5-25 minutes${RESET} to install (longer on a Zero W)."
-    echo -e "  The Freezr password will be in ${BOLD}/home/pi/freezr-setup.log${RESET} on the Pi."
+    echo -e "  The Freezr password will be in ${BOLD}/home/${SSH_USER}/freezr-setup.log${RESET} on the Pi."
     echo -e "  Freezr will be up at ${BOLD}http://${HOSTNAME}.local:8000${RESET} after that."
+    [ -n "$STATIC_IP" ] && echo -e "  Also reachable at ${BOLD}http://${IP_ADDR}:8000${RESET}"
 fi
 echo ""

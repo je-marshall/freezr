@@ -31,19 +31,23 @@ sudo ./make-sd.sh [OPTIONS] <image.img.xz> <sd-device>
 |------|-------------|
 | `--bake` | Pre-install everything in a QEMU chroot — Pi boots straight to a running Freezr service |
 | `--hostname NAME` | Set the Pi hostname (default: `freezr`) |
-| `--wifi SSID PASS` | Configure WiFi credentials |
-| `--pi-pass PASS` | Set the `pi` user password |
+| `--ssh-user NAME` | System/SSH username (default: `pi`) |
+| `--ssh-pass PASS` | System/SSH password (default: `raspberry` — change this!) |
+| `--ip ADDR` | Static IP address, e.g. `192.168.1.50` or `192.168.1.50/24` (default: DHCP) |
+| `--ssid NAME` | WiFi network name |
+| `--pass PASS` | WiFi password (required when `--ssid` is set) |
 
 ### Examples
 
 ```bash
 # Basic flash (first-boot installs Freezr automatically)
-sudo ./make-sd.sh --wifi "MyNetwork" "mypassword" \
+sudo ./make-sd.sh --ssid "MyNetwork" --pass "mypassword" \
     2024-11-19-raspios-bookworm-arm64.img.xz /dev/sdb
 
-# Pre-baked image — instant first boot
+# Pre-baked image with static IP — instant first boot, known address
 sudo ./make-sd.sh --bake --hostname freezr \
-    --wifi "MyNetwork" "mypassword" \
+    --ssh-user pi --ssh-pass secret \
+    --ip 192.168.1.50 --ssid "MyNetwork" --pass "mypassword" \
     2024-11-19-raspios-bookworm-arm64.img.xz /dev/sdb
 ```
 
@@ -117,5 +121,5 @@ FLASK_APP=freezr FLASK_DEBUG=1 venv/bin/flask run
 On the Pi, after making changes:
 
 ```bash
-cd /home/pi/freezr && git pull && sudo systemctl restart freezr
+cd ~/freezr && git pull && sudo systemctl restart freezr
 ```
