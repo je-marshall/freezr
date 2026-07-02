@@ -44,6 +44,14 @@
     {% block content %}{% endblock %}
 </section>
 
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    document.querySelectorAll('dialog').forEach(dialog => {
+        dialog.addEventListener('click', e => { if (e.target === dialog) dialog.close(); });
+    });
+});
+</script>
+
 {% if g.user %}
 <dialog id="user-modal" class="cs-dialog">
     <div class="heading">
