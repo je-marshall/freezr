@@ -333,15 +333,6 @@ fi
 # sshswitch.service enables SSH when this file is present on the boot partition
 touch "$BOOT_MNT/ssh"
 
-# ── Copy app ──────────────────────────────────────────────────────────────────
-header "Copying Freezr application"
-mkdir -p "$ROOT_MNT/home/pi/freezr"
-rsync -a --exclude='venv' --exclude='instance' --exclude='__pycache__' \
-    --exclude='*.pyc' --exclude='.git' \
-    "$APP_DIR/" "$ROOT_MNT/home/pi/freezr/"
-chown -R 1000:1000 "$ROOT_MNT/home/pi/freezr"
-step "Copied to /home/pi/freezr"
-
 # ── Bake or first-boot ────────────────────────────────────────────────────────
 if [ "$BAKE" = "1" ]; then
 
@@ -402,6 +393,7 @@ apt-get install -y \
 
 usermod -a -G lp,plugdev pi
 
+git clone https://github.com/je-marshall/freezr.git /home/pi/freezr
 cd /home/pi/freezr
 python3 -m venv venv
 venv/bin/pip install --upgrade pip wheel
@@ -438,6 +430,7 @@ apt-get install -y \
 
 usermod -a -G lp,plugdev pi
 
+git clone https://github.com/je-marshall/freezr.git /home/pi/freezr
 cd /home/pi/freezr
 sudo -u pi python3 -m venv venv
 sudo -u pi venv/bin/pip install --upgrade pip wheel
