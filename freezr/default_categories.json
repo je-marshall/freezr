@@ -1,12 +1,51 @@
 {
-    "Sausage": { "Sausage": ["diot", "morteau", "espellete", "mergeuz", "cumberland", "lincoln", "pork"] },
-    "Poultry": { "Chicken": ["breast", "wing", "leg", "thigh", "supreme", "whole", "giblets", "liver"] },
-    "Pork": { "Pork": ["chop", "tenderloin", "loin", "belly", "shoulder"] },
-    "Beef": { "Beef": ["steak", "brisket", "rib", "chuck"] },
-    "Venison": { "Venison": ["haunch", "saddle"] },
-    "Lamb": { "Lamb": ["leg", "shoulder", "rack", "shank"] },
-    "Game": { "Pheasant": ["breast", "leg", "whole"] },
-    "Duck": { "Duck": ["breast", "leg", "whole"] },
-    "Dairy": { "Cheese": ["cheddar", "mozzarella", "parmesan", "brie"], "Cream": [], "Milk": [] },
-    "Bread": { "Loaf": ["white", "wholemeal", "sourdough", "focaccia"], "Bun": ["burger", "hotdog"], "Croissant": [] }
+    "Meat": {
+        "Chicken":  ["breast", "thigh", "leg", "wing", "supreme", "whole", "liver"],
+        "Duck":     ["breast", "leg", "confit", "whole"],
+        "Beef":     ["steak", "mince", "brisket", "rib", "joint", "other"],
+        "Lamb":     ["chop", "leg", "shoulder", "rack", "shank", "mince"],
+        "Pork":     ["chop", "belly", "tenderloin", "loin", "shoulder", "mince", "rillettes"],
+        "Sausage":  ["cumberland", "lincolnshire", "pork", "chipolata", "toulouse", "merguez", "andouille", "boudin noir", "boudin blanc", "diots", "morteau", "chorizo", "other"],
+        "Venison":  ["haunch", "saddle", "mince"],
+        "Rabbit":   ["whole", "leg", "saddle"],
+        "Pheasant": ["breast", "leg", "whole"]
+    },
+    "Fish & Seafood": {
+        "Fish":      ["salmon", "cod", "haddock", "sea bass", "trout", "sole", "mackerel", "tuna"],
+        "Shellfish": ["prawns", "scallops", "mussels", "crab", "langoustine"],
+        "Other":     ["squid", "octopus", "other"]
+    },
+    "Dairy": {
+        "Cheese":    ["cheddar", "comté", "brie", "camembert", "roquefort", "mozzarella", "parmesan", "reblochon", "gruyère", "other"],
+        "Cream":     ["single", "double", "crème fraîche"],
+        "Butter":    ["salted", "unsalted"],
+        "Ice Cream": ["vanilla", "chocolate", "other"]
+    },
+    "Bread & Pastry": {
+        "Bread":   ["baguette", "white", "wholemeal", "sourdough", "focaccia", "brioche"],
+        "Pastry":  ["croissant", "pain au chocolat", "quiche", "galette", "tart"],
+        "Buns":    ["burger", "hot dog"]
+    },
+    "Vegetables": {
+        "Root":        ["carrot", "parsnip", "potato", "sweet potato", "beetroot", "celeriac"],
+        "Brassica":    ["broccoli", "cauliflower", "cabbage", "kale"],
+        "Pods & Beans": ["peas", "edamame", "broad beans", "green beans", "sweetcorn"],
+        "Other":       ["spinach", "leek", "onion", "courgette", "other"]
+    },
+    "Fruit": {
+        "Berries":     ["strawberry", "raspberry", "blueberry", "blackcurrant", "cherry"],
+        "Stone Fruit": ["peach", "plum", "apricot", "mango"],
+        "Other":       ["apple", "banana", "other"]
+    },
+    "Prepared": {
+        "Soup":              ["vegetable", "chicken", "fish", "other"],
+        "Stew & Casserole":  ["beef", "chicken", "lamb", "other"],
+        "Pasta & Rice":      ["pasta sauce", "risotto", "other"],
+        "Pastry Dishes":     ["quiche", "tart", "pie", "crumble"],
+        "Other":             ["other"]
+    },
+    "Stock & Sauce": {
+        "Stock": ["chicken", "beef", "fish", "vegetable"],
+        "Sauce": ["gravy", "béchamel", "tomato", "other"]
+    }
 }
