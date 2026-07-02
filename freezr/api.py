@@ -95,8 +95,8 @@ def settings():
         
     if request.method == 'POST':
         printer_identifier = request.form.get('printer_identifier')
-        printer_model = request.form.get('printer_model', 'QL-600')
-        label_size = request.form.get('label_size', '62x29')
+        printer_model = request.form.get('printer_model', 'QL-700')
+        label_size = request.form.get('label_size', '62')
         log.info('Saving printer settings: model=%s label=%s identifier=%r',
                  printer_model, label_size, printer_identifier)
 

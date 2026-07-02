@@ -27,6 +27,8 @@ def create_label_image(entry_id, description, date_str, label_size='62x29'):
     label_def = next((l for l in ALL_LABELS if l.identifier == label_size), None)
     if label_def and label_def.dots_printable:
         width, height = label_def.dots_printable
+        if height == 0:  # endless/continuous tape — choose our own cut length
+            height = 271
     else:
         width, height = 696, 271
 
