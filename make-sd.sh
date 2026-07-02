@@ -42,7 +42,7 @@ ${BOLD}OPTIONS${RESET}
   --ssh-pass PASS   SSH/system password              (default: raspberry — change this!)
   --ip ADDR         Static IP address                (default: DHCP)
                     Accepts plain IP or CIDR, e.g. 192.168.1.100 or 192.168.1.100/24
-                    Gateway defaults to x.x.x.1 of the given address
+  --gateway ADDR    Default gateway for static IP   (default: x.x.x.1 of --ip address)
   --ssid NAME       WiFi network name
   --pass PASS       WiFi password                    (required if --ssid is set)
   --bake            Install Freezr now via QEMU chroot — first boot goes straight
@@ -55,7 +55,7 @@ ${BOLD}EXAMPLES${RESET}
   sudo $0 raspios-bookworm-armhf-lite.img.xz /dev/sdb --ssid MyWifi --pass x --bake
   sudo $0 raspios-bookworm-arm64-lite.img.xz /dev/sdb \\
       --hostname freezr --ssh-user pi --ssh-pass secret \\
-      --ip 192.168.1.50 --ssid MyWifi --pass x
+      --ip 192.168.1.50 --gateway 192.168.1.1 --ssid MyWifi --pass x
 
 ${BOLD}NOTE${RESET}
   Pi Zero / Zero W requires the 32-bit armhf image (Bookworm or earlier).
@@ -73,6 +73,7 @@ HOSTNAME="freezr"
 SSH_USER="pi"
 SSH_PASS="raspberry"
 STATIC_IP=""
+STATIC_GW_OVERRIDE=""
 BAKE=0
 
 while [[ $# -gt 0 ]]; do
@@ -83,6 +84,7 @@ while [[ $# -gt 0 ]]; do
         --ssh-pass)    SSH_PASS="$2"; shift 2 ;;
         --pi-pass)     SSH_PASS="$2"; shift 2 ;;   # legacy alias
         --ip)          STATIC_IP="$2"; shift 2 ;;
+        --gateway)     STATIC_GW_OVERRIDE="$2"; shift 2 ;;
         --ssid)        WIFI_SSID="$2"; shift 2 ;;
         --pass)        WIFI_PASS="$2"; shift 2 ;;
         --bake)        BAKE=1; shift ;;
@@ -123,7 +125,7 @@ STATIC_GW=""
 if [ -n "$STATIC_IP" ]; then
     IP_ADDR="${STATIC_IP%%/*}"
     [[ "$STATIC_IP" != */* ]] && STATIC_IP="${STATIC_IP}/24"
-    STATIC_GW="${IP_ADDR%.*}.1"
+    STATIC_GW="${STATIC_GW_OVERRIDE:-${IP_ADDR%.*}.1}"
 fi
 
 # ── Plan summary ──────────────────────────────────────────────────────────────
@@ -287,9 +289,7 @@ network:
       regulatory-domain: GB
       addresses:
         - ${STATIC_IP}
-      routes:
-        - to: default
-          via: ${STATIC_GW}
+      gateway4: ${STATIC_GW}
       nameservers:
         addresses: [8.8.8.8, 1.1.1.1]
       access-points:
@@ -325,9 +325,7 @@ network:
       optional: true
       addresses:
         - ${STATIC_IP}
-      routes:
-        - to: default
-          via: ${STATIC_GW}
+      gateway4: ${STATIC_GW}
       nameservers:
         addresses: [8.8.8.8, 1.1.1.1]
 EOF
