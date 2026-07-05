@@ -52,9 +52,11 @@ def create_app(test_config=None):
     from . import freezers
     app.register_blueprint(freezers.bp)
     
-    # NEW: Registering our upcoming categories blueprint
     from . import categories
     app.register_blueprint(categories.bp)
+
+    from . import item
+    app.register_blueprint(item.bp)
     
     app.add_url_rule('/', endpoint='index')
     

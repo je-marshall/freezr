@@ -63,7 +63,8 @@ CREATE TABLE settings (
     id INTEGER PRIMARY KEY CHECK (id = 1),
     printer_identifier TEXT NOT NULL,
     printer_model TEXT NOT NULL DEFAULT 'QL-600',
-    label_size TEXT NOT NULL DEFAULT '62x29'
+    label_size TEXT NOT NULL DEFAULT '62x29',
+    base_url TEXT
 );
 
 -- Insert the default USB settings for the Brother QL-600

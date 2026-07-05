@@ -72,6 +72,7 @@ def print_item(id):
             printer_identifier=settings['printer_identifier'],
             printer_model=settings['printer_model'],
             label_size=settings['label_size'],
+            base_url=settings.get('base_url'),
         )
         if success:
             log.info('Print succeeded for entry id=%s', id)
@@ -97,16 +98,17 @@ def settings():
         printer_identifier = request.form.get('printer_identifier')
         printer_model = request.form.get('printer_model', 'QL-700')
         label_size = request.form.get('label_size', '62')
-        log.info('Saving printer settings: model=%s label=%s identifier=%r',
-                 printer_model, label_size, printer_identifier)
+        base_url = request.form.get('base_url', '').strip() or None
+        log.info('Saving printer settings: model=%s label=%s identifier=%r base_url=%r',
+                 printer_model, label_size, printer_identifier, base_url)
 
         existing = db.execute('SELECT id FROM settings WHERE id = 1').fetchone()
         if existing:
-            db.execute('UPDATE settings SET printer_identifier = ?, printer_model = ?, label_size = ? WHERE id = 1',
-                (printer_identifier, printer_model, label_size))
+            db.execute('UPDATE settings SET printer_identifier = ?, printer_model = ?, label_size = ?, base_url = ? WHERE id = 1',
+                (printer_identifier, printer_model, label_size, base_url))
         else:
-            db.execute('INSERT INTO settings (id, printer_identifier, printer_model, label_size) VALUES (1, ?, ?, ?)',
-                (printer_identifier, printer_model, label_size))
+            db.execute('INSERT INTO settings (id, printer_identifier, printer_model, label_size, base_url) VALUES (1, ?, ?, ?, ?)',
+                (printer_identifier, printer_model, label_size, base_url))
         db.commit()
         log.info('Printer settings saved')
         flash('Printer settings saved successfully.', 'success')

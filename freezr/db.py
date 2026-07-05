@@ -100,3 +100,14 @@ def init_app(app):
     app.teardown_appcontext(close_db)
     app.cli.add_command(init_db_command)
     app.cli.add_command(reset_password_command)
+
+    with app.app_context():
+        db = get_db()
+        for stmt in [
+            'ALTER TABLE settings ADD COLUMN base_url TEXT',
+        ]:
+            try:
+                db.execute(stmt)
+                db.commit()
+            except Exception:
+                pass

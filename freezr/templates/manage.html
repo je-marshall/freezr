@@ -147,6 +147,14 @@
                         <div><strong>Identifier:</strong> {{ settings['printer_identifier'] if settings else 'Not configured' }}</div>
                         <div><strong>Model:</strong> {{ settings['printer_model'] if settings else 'Not configured' }}</div>
                         <div><strong>Label Size:</strong> {{ settings['label_size'] if settings else 'Not configured' }}</div>
+                        <div><strong>Base URL:</strong>
+                            {% if settings and settings['base_url'] %}
+                                <code style="font-size:0.9em;">{{ settings['base_url'] }}</code>
+                                <span style="font-size:0.8em; opacity:0.6;"> — QR codes link to items</span>
+                            {% else %}
+                                <span style="opacity:0.6;">Not set — QR codes contain entry ID only</span>
+                            {% endif %}
+                        </div>
                     </li>
                 </ul>
                 <button class="cs-btn" style="margin-top: 15px; width: 100%; font-weight: bold;" onclick="document.getElementById('edit-printer-modal').showModal()">Edit Printer Settings</button>
@@ -200,6 +208,11 @@
                     <option value="62x29" {% if settings and settings['label_size'] == '62x29' %}selected{% endif %}>62x29 (Standard)</option>
                     <option value="62" {% if settings and settings['label_size'] == '62' %}selected{% endif %}>62 (Continuous)</option>
                 </select>
+            </div>
+            <div>
+                <label style="font-weight: bold; margin-bottom: 5px; display: block;">Server Base URL:</label>
+                <input type="text" name="base_url" value="{{ settings['base_url'] if settings and settings['base_url'] else '' }}" class="cs-input" style="width: 100%;" placeholder="e.g. http://192.168.1.50:5000">
+                <p style="font-size:0.8em; color:#aaa; margin-top:4px;">Optional. If set, QR codes on labels will link directly to each item in the app.</p>
             </div>
             <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px;">
                 <button type="button" class="cs-btn" onclick="document.getElementById('edit-printer-modal').close()">Cancel</button>

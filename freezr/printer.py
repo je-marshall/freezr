@@ -24,7 +24,7 @@ def _find_font(name):
             return p
     return None
 
-def create_label_image(entry_id, description, date_str, label_size='62x29'):
+def create_label_image(entry_id, description, date_str, label_size='62x29', base_url=None):
     from brother_ql.labels import ALL_LABELS
     label_def = next((l for l in ALL_LABELS if l.identifier == label_size), None)
     if label_def and label_def.dots_printable:
@@ -47,7 +47,8 @@ def create_label_image(entry_id, description, date_str, label_size='62x29'):
     qr_size = height - (BORDER + PAD) * 2
     qr = qrcode.QRCode(version=1, error_correction=qrcode.constants.ERROR_CORRECT_H,
                        box_size=10, border=1)
-    qr.add_data(str(entry_id))
+    qr_data = f"{base_url.rstrip('/')}/item/{entry_id}" if base_url else str(entry_id)
+    qr.add_data(qr_data)
     qr.make(fit=True)
     qr_img = qr.make_image(fill_color='black', back_color='white').resize((qr_size, qr_size))
     qr_x = width - PAD - qr_size
@@ -117,14 +118,14 @@ def create_label_image(entry_id, description, date_str, label_size='62x29'):
     return img
 
 
-def print_label(entry_id, description, date_str, printer_identifier, printer_model='QL-700', label_size='62'):
+def print_label(entry_id, description, date_str, printer_identifier, printer_model='QL-700', label_size='62', base_url=None):
     """
     Generates the image and dispatches it directly to the Brother print backend.
     """
     log.info('print_label called: entry_id=%s model=%s label=%s identifier=%r',
              entry_id, printer_model, label_size, printer_identifier)
     try:
-        img = create_label_image(entry_id, description, date_str, label_size)
+        img = create_label_image(entry_id, description, date_str, label_size, base_url=base_url)
 
         log.debug('Initialising BrotherQLRaster for model %s', printer_model)
         qlr = BrotherQLRaster(printer_model)

@@ -1,0 +1,63 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ entry.desc | capitalize }}{% endblock %}
+
+{% block nav_actions %}
+<a href="{{ url_for('index') }}" class="cs-btn" style="text-decoration: none; font-weight: bold; padding: 10px 20px; display: flex; align-items: center; gap: 8px;">
+    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="19" y1="12" x2="5" y2="12"></line>
+        <polyline points="12 19 5 12 12 5"></polyline>
+    </svg>
+    Inventory
+</a>
+{% endblock %}
+
+{% block content %}
+<div style="max-width: 480px; margin: 20px auto; text-align: left;">
+
+    <h2 style="font-size: 1.6rem; font-weight: bold; margin-bottom: 4px; line-height: 1.2;">
+        {{ entry.desc | capitalize }}
+    </h2>
+    <p style="opacity: 0.5; font-size: 0.85rem; margin-bottom: 24px;">Entry #{{ entry.id }}</p>
+
+    <div style="display: flex; flex-direction: column; gap: 0;">
+
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #333;">
+            <span style="opacity: 0.7;">Location</span>
+            <strong>{{ entry.location }}</strong>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #333;">
+            <span style="opacity: 0.7;">Quantity</span>
+            <strong>{{ entry.quantity }}</strong>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #333;">
+            <span style="opacity: 0.7;">Added</span>
+            <strong>{{ entry.created | string | truncate(10, killwords=True, end='') }}</strong>
+        </div>
+
+        {% if entry.skin or entry.bone or entry.minced or entry.grated or entry.cooked %}
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #333;">
+            <span style="opacity: 0.7;">Prep</span>
+            <strong>
+                {% if entry.skin %}Skin on {% endif %}
+                {% if entry.bone %}Bone in {% endif %}
+                {% if entry.minced %}Minced {% endif %}
+                {% if entry.grated %}Grated {% endif %}
+                {% if entry.cooked %}Cooked{% endif %}
+            </strong>
+        </div>
+        {% endif %}
+
+        {% if entry.notes %}
+        <div style="padding: 12px 0; border-bottom: 1px solid #333;">
+            <span style="opacity: 0.7; display: block; margin-bottom: 6px;">Notes</span>
+            <p style="margin: 0; line-height: 1.5;">{{ entry.notes }}</p>
+        </div>
+        {% endif %}
+
+    </div>
+
+</div>
+{% endblock %}
