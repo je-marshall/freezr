@@ -20,7 +20,7 @@
     </h2>
     <p style="opacity: 0.5; font-size: 0.85rem; margin-bottom: 24px;">Entry #{{ entry.id }}</p>
 
-    <div style="display: flex; flex-direction: column; gap: 0;">
+    <div style="display: flex; flex-direction: column; gap: 0; margin-bottom: 30px;">
 
         <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #333;">
             <span style="opacity: 0.7;">Location</span>
@@ -59,5 +59,165 @@
 
     </div>
 
+    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <button type="button" id="btn-print" class="cs-btn" style="flex: 1; font-weight: bold; padding: 12px;">PRINT</button>
+        <button type="button" onclick="document.getElementById('copy-modal').showModal()" class="cs-btn" style="flex: 1; font-weight: bold; padding: 12px;">COPY</button>
+        <button type="button" onclick="document.getElementById('move-modal').showModal()" class="cs-btn" style="flex: 1; font-weight: bold; padding: 12px;">MOVE</button>
+        <button type="button" onclick="document.getElementById('checkout-modal').showModal()" class="cs-btn" style="flex: 1; font-weight: bold; padding: 12px;">CHECK OUT</button>
+    </div>
+
 </div>
+
+<!-- Move modal -->
+<dialog id="move-modal" class="cs-dialog">
+    <div class="heading">
+        <div class="wrapper"><div class="icon"></div><p class="text" style="font-weight: bold;">Move Item</p></div>
+        <button class="cs-btn close" type="button" onclick="document.getElementById('move-modal').close()"></button>
+    </div>
+    <div class="content" style="padding: 20px;">
+        <form method="POST" action="{{ url_for('move.move') }}" style="display: flex; flex-direction: column; gap: 15px;">
+            <input type="hidden" name="entry_id" value="{{ entry.id }}">
+            <div style="display: flex; gap: 10px;">
+                <div style="flex: 2;">
+                    <label style="display: block; font-weight: bold; margin-bottom: 5px;">New Freezer:</label>
+                    <select id="move-freezer" name="freezer" required class="cs-select" style="width: 100%;">
+                        <option value="">-- Select Freezer --</option>
+                        {% for freezer in freezers %}
+                            <option value="{{ freezer.id }}" data-drawers="{{ freezer.drawers }}">{{ freezer.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div style="flex: 1;">
+                    <label style="display: block; font-weight: bold; margin-bottom: 5px;">Drawer:</label>
+                    <select id="move-drawer" name="drawer" required class="cs-select" style="width: 100%;"></select>
+                </div>
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                <button type="button" class="cs-btn" onclick="document.getElementById('move-modal').close()">Cancel</button>
+                <button type="submit" class="cs-btn">Confirm Move</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+
+<!-- Check out modal -->
+<dialog id="checkout-modal" class="cs-dialog">
+    <div class="heading">
+        <div class="wrapper"><div class="icon"></div><p class="text" style="font-weight: bold;">Check Out Item</p></div>
+        <button class="cs-btn close" type="button" onclick="document.getElementById('checkout-modal').close()"></button>
+    </div>
+    <div class="content" style="padding: 20px; text-align: center;">
+        <p style="font-size: 1.1rem; margin-bottom: 20px;">Remove <strong>{{ entry.desc | capitalize }}</strong> from inventory?</p>
+        <form method="POST" action="{{ url_for('checkout.checkout') }}" style="display: flex; gap: 10px;">
+            <input type="hidden" name="entry_id" value="{{ entry.id }}">
+            <button type="button" class="cs-btn" style="flex: 1;" onclick="document.getElementById('checkout-modal').close()">Cancel</button>
+            <button type="submit" class="cs-btn danger" style="flex: 1;">Check Out</button>
+        </form>
+    </div>
+</dialog>
+
+<!-- Copy modal -->
+<dialog id="copy-modal" class="cs-dialog">
+    <div class="heading">
+        <div class="wrapper"><div class="icon"></div><p class="text" style="font-weight: bold;">Copy — {{ entry.desc | capitalize }}</p></div>
+        <button class="cs-btn close" type="button" onclick="document.getElementById('copy-modal').close()"></button>
+    </div>
+    <div class="content" style="padding: 20px; text-align: left;">
+        <form id="copy-form" method="POST" action="{{ url_for('checkin.checkin') }}" style="display: flex; flex-direction: column; gap: 15px;">
+            <input type="hidden" name="category" value="{{ entry.category_id }}">
+            <input type="hidden" name="subcat"    value="{{ entry.subcat_id }}">
+            <input type="hidden" name="subsub"    value="{{ entry.subsub_id or '' }}">
+            <input type="hidden" name="skin"      value="{{ '1' if entry.skin else '' }}">
+            <input type="hidden" name="bone"      value="{{ '1' if entry.bone else '' }}">
+            <input type="hidden" name="minced"    value="{{ '1' if entry.minced else '' }}">
+            <input type="hidden" name="grated"    value="{{ '1' if entry.grated else '' }}">
+            <input type="hidden" name="cooked"    value="{{ '1' if entry.cooked else '' }}">
+            <input type="hidden" name="notes"     value="{{ entry.notes or '' }}">
+            <div>
+                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Qty:</label>
+                <input type="text" name="quantity" value="{{ entry.quantity }}" class="cs-input" style="width: 100%;">
+            </div>
+            <div>
+                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Freezer:</label>
+                <select id="copy-freezer" name="freezer" required class="cs-select" style="width: 100%;">
+                    <option value="">-- Select Freezer --</option>
+                    {% for freezer in freezers %}
+                        <option value="{{ freezer.id }}" data-drawers="{{ freezer.drawers }}">{{ freezer.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Drawer:</label>
+                <select id="copy-drawer" name="drawer" required class="cs-select" style="width: 100%;"></select>
+            </div>
+            <div>
+                <label style="display: block; font-weight: bold; margin-bottom: 5px;">Date added: <span style="font-weight: normal; opacity: 0.7;">(leave blank for today)</span></label>
+                <input type="date" name="date_added" class="cs-input" style="width: 100%;">
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <label style="font-weight: bold; cursor: pointer;">
+                    <input type="checkbox" name="print_label" value="1" checked> Print QR Label
+                </label>
+                <div style="display: flex; gap: 10px;">
+                    <button type="button" class="cs-btn" onclick="document.getElementById('copy-modal').close()">Cancel</button>
+                    <button type="submit" class="cs-btn">Save Copy</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</dialog>
+
+<script>
+    const entryId   = {{ entry.id }};
+    const entryDesc = {{ entry.desc | tojson }};
+
+    // Freezer → drawer cascade (move)
+    document.getElementById('move-freezer').addEventListener('change', function() {
+        const drawer = document.getElementById('move-drawer');
+        drawer.innerHTML = '<option value="">-- Select Drawer --</option>';
+        if (!this.value) return;
+        const n = parseInt(this.options[this.selectedIndex].getAttribute('data-drawers')) || 4;
+        for (let i = 1; i <= n; i++) drawer.innerHTML += `<option value="${i}">${i}</option>`;
+    });
+
+    // Freezer → drawer cascade (copy)
+    document.getElementById('copy-freezer').addEventListener('change', function() {
+        const drawer = document.getElementById('copy-drawer');
+        drawer.innerHTML = '<option value="">-- Select Drawer --</option>';
+        if (!this.value) return;
+        const n = parseInt(this.options[this.selectedIndex].getAttribute('data-drawers')) || 4;
+        for (let i = 1; i <= n; i++) drawer.innerHTML += `<option value="${i}">${i}</option>`;
+    });
+
+    // Copy form — AJAX so we can optionally print before redirecting
+    document.getElementById('copy-form').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        try {
+            const res  = await fetch(this.action, { method: 'POST', body: formData, headers: { 'Accept': 'application/json' } });
+            const data = await res.json();
+            if (data.success) {
+                if (formData.get('print_label') && typeof window.triggerPrint === 'function') {
+                    const qty = formData.get('quantity') || '1';
+                    const prefix = /^\d+$/.test(qty) ? qty + 'x' : qty;
+                    await window.triggerPrint(data.entry_id, prefix + ' ' + entryDesc.replace(/^\S+\s/, ''));
+                }
+                window.location.href = '{{ url_for("index") }}';
+            } else {
+                alert('Error: ' + (data.message || 'Unknown error'));
+            }
+        } catch (err) {
+            alert('A server error occurred.');
+        }
+    });
+
+    // Print button
+    document.getElementById('btn-print').addEventListener('click', function() {
+        if (typeof window.triggerPrint === 'function') {
+            window.triggerPrint(entryId, entryDesc);
+        }
+    });
+</script>
+
+<script src="{{ url_for('static', filename='print.js') }}"></script>
 {% endblock %}
