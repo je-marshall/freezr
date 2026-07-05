@@ -47,7 +47,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function updateQtyHidden() {
         if (!qtyHidden) return;
-        const num  = qtyNumber ? qtyNumber.value : '1';
+        const raw = qtyNumber ? qtyNumber.value.trim() : '';
+        const num  = raw || (qtyNumber ? qtyNumber.placeholder || '1' : '1');
         const unit = (qtyUnit && qtyUnit.style.display !== 'none') ? qtyUnit.value : '';
         qtyHidden.value = num + unit;
     }
@@ -55,22 +56,20 @@ document.addEventListener('DOMContentLoaded', function() {
     function applyQtyType(qtyType) {
         if (!qtyNumber || !qtyUnit || !qtyHidden) return;
         if (qtyType !== currentQtyType) {
-            if (qtyType === 'weight') { qtyNumber.value = '500'; }
-            else if (qtyType === 'volume') { qtyNumber.value = '500'; }
-            else { qtyNumber.value = '1'; }
+            qtyNumber.value = '';
         }
         currentQtyType = qtyType;
         if (qtyType === 'weight') {
+            qtyNumber.placeholder = '500';
             setUnitOptions(WEIGHT_UNITS);
             qtyUnit.style.display = '';
-            qtyNumber.step = 'any'; qtyNumber.min = '0';
         } else if (qtyType === 'volume') {
+            qtyNumber.placeholder = '500';
             setUnitOptions(VOLUME_UNITS);
             qtyUnit.style.display = '';
-            qtyNumber.step = 'any'; qtyNumber.min = '0';
         } else {
+            qtyNumber.placeholder = '1';
             qtyUnit.style.display = 'none';
-            qtyNumber.step = '1'; qtyNumber.min = '1';
         }
         updateQtyHidden();
     }
