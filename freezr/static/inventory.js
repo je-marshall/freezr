@@ -128,9 +128,12 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('copy-cooked').value   = currentEntry.cooked ? '1' : '';
             document.getElementById('copy-notes').value    = currentEntry.notes  || '';
             document.getElementById('copy-quantity').value = currentEntry.quantity;
-            // Reset location fields
-            if (copyFreezer) copyFreezer.value = '';
-            if (copyDrawer)  copyDrawer.innerHTML = '<option value="">-- Select Drawer --</option>';
+            // Pre-populate location from source entry (user can override)
+            if (copyFreezer) {
+                copyFreezer.value = currentEntry.freezer_id;
+                copyFreezer.dispatchEvent(new Event('change')); // populates drawer options
+            }
+            if (copyDrawer) copyDrawer.value = currentEntry.drawer;
             viewModal.close();
             copyModal.showModal();
         });
