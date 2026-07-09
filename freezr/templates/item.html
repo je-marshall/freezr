@@ -171,22 +171,28 @@
     const entryId   = {{ entry.id }};
     const entryDesc = {{ entry.desc | tojson }};
 
+    function populateDrawers(drawerSelect, n) {
+        drawerSelect.innerHTML = '<option value="">-- Select Drawer --</option>';
+        for (let i = 1; i <= n; i++) {
+            const opt = document.createElement('option');
+            opt.value = i;
+            opt.textContent = i;
+            drawerSelect.appendChild(opt);
+        }
+    }
+
     // Freezer → drawer cascade (move)
     document.getElementById('move-freezer').addEventListener('change', function() {
         const drawer = document.getElementById('move-drawer');
-        drawer.innerHTML = '<option value="">-- Select Drawer --</option>';
-        if (!this.value) return;
-        const n = parseInt(this.options[this.selectedIndex].getAttribute('data-drawers')) || 4;
-        for (let i = 1; i <= n; i++) drawer.innerHTML += `<option value="${i}">${i}</option>`;
+        if (!this.value) { drawer.innerHTML = '<option value="">-- Select Drawer --</option>'; return; }
+        populateDrawers(drawer, parseInt(this.options[this.selectedIndex].getAttribute('data-drawers')) || 4);
     });
 
     // Freezer → drawer cascade (copy)
     document.getElementById('copy-freezer').addEventListener('change', function() {
         const drawer = document.getElementById('copy-drawer');
-        drawer.innerHTML = '<option value="">-- Select Drawer --</option>';
-        if (!this.value) return;
-        const n = parseInt(this.options[this.selectedIndex].getAttribute('data-drawers')) || 4;
-        for (let i = 1; i <= n; i++) drawer.innerHTML += `<option value="${i}">${i}</option>`;
+        if (!this.value) { drawer.innerHTML = '<option value="">-- Select Drawer --</option>'; return; }
+        populateDrawers(drawer, parseInt(this.options[this.selectedIndex].getAttribute('data-drawers')) || 4);
     });
 
     // Copy form — AJAX so we can optionally print before redirecting

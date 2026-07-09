@@ -17,9 +17,9 @@ def index():
     generate_description(all_entries)
     
     # Fetch data to populate the modal's dynamic dropdown menus
-    categories = db.execute('SELECT * FROM categories').fetchall()
-    subcats = db.execute('SELECT * FROM subcats').fetchall()
-    subsubs = db.execute('SELECT * FROM subsub').fetchall()
+    categories = db.execute('SELECT * FROM categories WHERE auth_id = ?', (g.user['id'],)).fetchall()
+    subcats    = db.execute('SELECT * FROM subcats WHERE auth_id = ?',    (g.user['id'],)).fetchall()
+    subsubs    = db.execute('SELECT * FROM subsub WHERE auth_id = ?',     (g.user['id'],)).fetchall()
     
     # UPDATED: Strictly filter freezers so users only see their own!
     freezers = db.execute(

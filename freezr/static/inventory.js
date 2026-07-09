@@ -146,7 +146,10 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!this.value) return;
             const numDrawers = parseInt(this.options[this.selectedIndex].getAttribute('data-drawers')) || 4;
             for (let i = 1; i <= numDrawers; i++) {
-                copyDrawer.innerHTML += `<option value="${i}">${i}</option>`;
+                const opt = document.createElement('option');
+                opt.value = i;
+                opt.textContent = i;
+                copyDrawer.appendChild(opt);
             }
         });
     }
@@ -201,7 +204,10 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!this.value) return;
             const numDrawers = parseInt(this.options[this.selectedIndex].getAttribute('data-drawers')) || 4;
             for (let i = 1; i <= numDrawers; i++) {
-                moveDrawerSelect.innerHTML += `<option value="${i}">${i}</option>`;
+                const opt = document.createElement('option');
+                opt.value = i;
+                opt.textContent = i;
+                moveDrawerSelect.appendChild(opt);
             }
         });
     }

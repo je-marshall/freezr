@@ -35,6 +35,13 @@ def checkin():
     if error is None:
         try:
             db = get_db()
+            # Verify submitted IDs belong to the current user
+            if not db.execute('SELECT 1 FROM categories WHERE id = ? AND auth_id = ?', (category, g.user['id'])).fetchone():
+                return jsonify({'success': False, 'message': 'Invalid category.'}), 400
+            if not db.execute('SELECT 1 FROM subcats WHERE id = ? AND auth_id = ?', (subcat, g.user['id'])).fetchone():
+                return jsonify({'success': False, 'message': 'Invalid sub-category.'}), 400
+            if not db.execute('SELECT 1 FROM freezers WHERE id = ? AND auth_id = ?', (freezer, g.user['id'])).fetchone():
+                return jsonify({'success': False, 'message': 'Invalid freezer.'}), 400
             if date_added:
                 cursor = db.execute(
                     '''INSERT INTO entries
