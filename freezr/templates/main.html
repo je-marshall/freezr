@@ -41,9 +41,45 @@
 {% endblock %}
 
 {% block content %}
-    <div class="scroll-container" style="width: 100%; max-height: 65vh; display: flex; flex-direction: column; gap: 12px; margin-top: 25px; padding-right: 10px; box-sizing: border-box; overflow-y: auto;">
+    <style>
+        .inv-tab {
+            background: var(--bg);
+            border: 1px solid;
+            border-color: var(--border-light) var(--border-dark) transparent var(--border-light);
+            color: var(--text);
+            cursor: pointer;
+            flex-shrink: 0;
+            font: inherit;
+            font-size: 16px;
+            line-height: 15px;
+            margin-right: 1px;
+            min-width: 52px;
+            padding: 5px 10px;
+            text-align: left;
+            user-select: none;
+            white-space: nowrap;
+        }
+        .inv-tab.active {
+            color: var(--accent);
+            border-bottom-color: var(--bg);
+        }
+        .inv-tab:active {
+            border-color: var(--border-dark) var(--border-light) transparent var(--border-dark);
+        }
+    </style>
+
+    <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%; margin-top: 20px;">
+        <div style="display: flex; flex-wrap: nowrap; align-items: flex-end; border-bottom: 1px solid var(--border-dark); padding-bottom: 0;">
+            <button class="inv-tab active" data-cat="all">All</button>
+            {% for cat in categories %}
+            <button class="inv-tab" data-cat="{{ cat.id }}">{{ cat.category | capitalize }}</button>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="scroll-container" style="width: 100%; max-height: 62vh; display: flex; flex-direction: column; gap: 12px; margin-top: 10px; padding-right: 10px; box-sizing: border-box; overflow-y: auto;">
         {% for entry in entries %}
-            <div class="entry-item cs-btn" data-id="{{ entry.id }}" style="display: flex; justify-content: space-between; align-items: center; padding: 0 20px; min-height: 68px; box-sizing: border-box; cursor: pointer; border-radius: 4px;">
+            <div class="entry-item cs-btn" data-id="{{ entry.id }}" data-category-id="{{ entry.category_id }}" style="display: flex; justify-content: space-between; align-items: center; padding: 0 20px; min-height: 68px; box-sizing: border-box; cursor: pointer; border-radius: 4px;">
                 <div style="display: flex; flex-direction: column; justify-content: center; gap: 6px; text-align: left;">
                     <strong style="font-size: 1.2rem; display: block; font-weight: bold; line-height: 1;">{{ entry.desc | capitalize }}</strong>
                     <span style="font-size: 0.9rem; opacity: 0.8; font-weight: normal; line-height: 1;">{{ entry.location }}</span>
@@ -55,6 +91,7 @@
         {% else %}
             <p style="text-align: center; opacity: 0.7; font-weight: bold; margin-top: 20px;">Your freezer is empty.</p>
         {% endfor %}
+        <p id="empty-inventory-msg" style="display: none; text-align: center; opacity: 0.7; font-weight: bold; margin-top: 20px;">No items in this category.</p>
     </div>
 
     <dialog id="scanner-modal" class="cs-dialog">
