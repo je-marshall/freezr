@@ -24,7 +24,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // This fires the instant a QR code is successfully read
-    function onScanSuccess(decodedText, decodedResult) {
+    function onScanSuccess(decodedText) {
         let entryId = null;
 
         // New format: full URL like http://host/item/123
@@ -33,21 +33,37 @@ document.addEventListener('DOMContentLoaded', function() {
             const match = url.pathname.match(/\/item\/(\d+)/);
             if (match) entryId = parseInt(match[1]);
         } catch (e) {
-            // Not a URL — try legacy plain-integer format
+            // Legacy plain-integer format
             const n = parseInt(decodedText);
             if (!isNaN(n)) entryId = n;
         }
 
-        if (entryId !== null) {
-            scannerModal.close();
-            const listItem = document.querySelector(`.entry-item[data-id="${entryId}"]`);
-            if (listItem) {
-                listItem.click();
-            } else {
-                alert("Item ID " + entryId + " not found in current inventory.");
-            }
+        if (entryId === null) {
+            alert("Invalid QR Code. Please scan a Freezr label.");
+            return;
+        }
+
+        scannerModal.close();
+
+        // Is this entry in the current data at all?
+        const entries = window.freezrData ? window.freezrData.entries : [];
+        const inData  = entries.some(e => e.id === entryId);
+
+        let listItem = document.querySelector(`.entry-item[data-id="${entryId}"]`);
+
+        if (!listItem && inData) {
+            // Item exists but is hidden by a tab or search filter — reset to All
+            const allTab = document.querySelector('.inv-tab[data-cat="all"]');
+            if (allTab) allTab.click();
+            listItem = document.querySelector(`.entry-item[data-id="${entryId}"]`);
+        }
+
+        if (listItem) {
+            listItem.click();
         } else {
-            alert("Invalid QR Code scanned. Please scan a Freezr label.");
+            // Item not in inventory — likely already checked out
+            const notFoundModal = document.getElementById('not-found-modal');
+            if (notFoundModal) notFoundModal.showModal();
         }
     }
 

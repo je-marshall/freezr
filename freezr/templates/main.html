@@ -108,6 +108,20 @@
         </div>
     </dialog>
 
+    <dialog id="not-found-modal" class="cs-dialog">
+        <div class="heading">
+            <div class="wrapper"><div class="icon"></div><p class="text" style="font-weight: bold;">Item Not Found</p></div>
+            <button id="btn-close-not-found" class="cs-btn close"></button>
+        </div>
+        <div class="content" style="padding: 20px; text-align: center;">
+            <p style="margin-bottom: 20px;">This item isn't in your freezer — it may have been checked out.</p>
+            <div style="display: flex; gap: 10px;">
+                <button id="btn-not-found-cancel" class="cs-btn" style="flex: 1;">Cancel</button>
+                <button id="btn-not-found-checkin" class="cs-btn" style="flex: 1; font-weight: bold;">Check In New Item</button>
+            </div>
+        </div>
+    </dialog>
+
     <dialog id="checkin-modal" class="cs-dialog">
         <div class="heading">
             <div class="wrapper"><div class="icon"></div><p class="text" style="font-weight: bold;">Check in item</p></div>
@@ -318,4 +332,20 @@
     <script src="{{ url_for('static', filename='inventory.js') }}"></script>
     <script src="{{ url_for('static', filename='scanner.js') }}"></script>
     <script src="{{ url_for('static', filename='search.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const notFoundModal  = document.getElementById('not-found-modal');
+            const btnCheckin     = document.getElementById('btn-checkin');
+            document.getElementById('btn-not-found-checkin')?.addEventListener('click', function() {
+                notFoundModal.close();
+                btnCheckin?.click();
+            });
+            document.getElementById('btn-not-found-cancel')?.addEventListener('click', function() {
+                notFoundModal.close();
+            });
+            document.getElementById('btn-close-not-found')?.addEventListener('click', function() {
+                notFoundModal.close();
+            });
+        });
+    </script>
 {% endblock %}
