@@ -105,6 +105,12 @@ def init_app(app):
         db = get_db()
         for stmt in [
             'ALTER TABLE settings ADD COLUMN base_url TEXT',
+            # Per-subcat default quantity type (seeds the wizard's quantity step)
+            "ALTER TABLE subcats ADD COLUMN quantity_type TEXT NOT NULL DEFAULT 'count'",
+            # Per-entry quantity, now configurable per check-in (count/weight/volume)
+            "ALTER TABLE entries ADD COLUMN quantity_type TEXT NOT NULL DEFAULT 'count'",
+            'ALTER TABLE entries ADD COLUMN quantity_value REAL',
+            'ALTER TABLE entries ADD COLUMN quantity_unit TEXT',
         ]:
             try:
                 db.execute(stmt)

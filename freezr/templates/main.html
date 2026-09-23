@@ -122,78 +122,136 @@
         </div>
     </dialog>
 
-    <dialog id="checkin-modal" class="cs-dialog">
+    <dialog id="checkin-wizard-modal" class="cs-dialog">
         <div class="heading">
             <div class="wrapper"><div class="icon"></div><p class="text" style="font-weight: bold;">Check in item</p></div>
-            <button id="btn-close-modal" class="cs-btn close"></button>
+            <button id="btn-wiz-close" class="cs-btn close" type="button"></button>
         </div>
-        <div class="content" style="padding: 20px; text-align: left;">
-            <form method="POST" action="{{ url_for('checkin.checkin') }}" style="display: flex; flex-direction: column; gap: 15px;">
-                <div>
-                    <label style="display: block; font-weight: bold; margin-bottom: 5px;">Category:</label>
-                    <select id="category" name="category" required class="cs-select" style="width: 100%; padding: 5px;">
+
+        <!-- Step indicator -->
+        <div id="wiz-stepper" style="display: flex; gap: 4px; padding: 8px 10px 0; font-size: 0.85rem;">
+            <span class="wiz-dot" data-step="1">1 · Item</span>
+            <span class="wiz-dot" data-step="2">2 · Qty</span>
+            <span class="wiz-dot" data-step="3">3 · Location</span>
+            <span class="wiz-dot" data-step="4">4 · Finish</span>
+        </div>
+
+        <div class="content" style="padding: 14px; text-align: left;">
+            <form id="wiz-form" method="POST" action="{{ url_for('checkin.checkin') }}">
+                <!-- Hidden fields collected across steps -->
+                <input type="hidden" name="category"       id="wiz-category">
+                <input type="hidden" name="subcat"         id="wiz-subcat">
+                <input type="hidden" name="subsub"         id="wiz-subsub">
+                <input type="hidden" name="freezer"        id="wiz-freezer">
+                <input type="hidden" name="drawer"         id="wiz-drawer">
+                <input type="hidden" name="quantity"       id="wiz-quantity" value="1">
+                <input type="hidden" name="quantity_type"  id="wiz-quantity-type" value="count">
+                <input type="hidden" name="quantity_value" id="wiz-quantity-value">
+                <input type="hidden" name="quantity_unit"  id="wiz-quantity-unit">
+                <input type="hidden" name="skin"   id="wiz-skin">
+                <input type="hidden" name="bone"   id="wiz-bone">
+                <input type="hidden" name="minced" id="wiz-minced">
+                <input type="hidden" name="grated" id="wiz-grated">
+                <input type="hidden" name="cooked" id="wiz-cooked">
+
+                <!-- ===== STEP 1: ITEM ===== -->
+                <section class="wiz-step" data-step="1">
+                    <label class="wiz-label">Category</label>
+                    <select id="wiz-cat-select" class="cs-select" style="width:100%; margin-bottom:12px;">
                         <option value="">-- Select Category --</option>
                         {% for cat in categories %}
                             <option value="{{ cat.id }}">{{ cat.category | capitalize }}</option>
                         {% endfor %}
                     </select>
-                </div>
-                <div id="subcat-container" style="display: none;">
-                    <label style="display: block; font-weight: bold; margin-bottom: 5px;">Sub-Category:</label>
-                    <select id="subcat" name="subcat" class="cs-select" style="width: 100%; padding: 5px;"></select>
-                </div>
-                <div id="subsub-container" style="display: none;">
-                    <label style="display: block; font-weight: bold; margin-bottom: 5px;">Type:</label>
-                    <select id="subsub" name="subsub" class="cs-select" style="width: 100%; padding: 5px;"></select>
-                </div>
-                <div id="checkboxes-container" style="display: flex; gap: 15px; flex-wrap: wrap;">
-                    <label id="lbl-skin" style="display:none;"><input type="checkbox" name="skin" value="1"> Skin on</label>
-                    <label id="lbl-bone" style="display:none;"><input type="checkbox" name="bone" value="1"> Bone in</label>
-                    <label id="lbl-minced" style="display:none;"><input type="checkbox" name="minced" value="1"> Minced</label>
-                    <label id="lbl-grated" style="display:none;"><input type="checkbox" name="grated" value="1"> Grated</label>
-                    <label id="lbl-cooked" style="display:none;"><input type="checkbox" name="cooked" value="1"> Cooked</label>
-                </div>
-                <div>
-                    <label style="display: block; font-weight: bold; margin-bottom: 5px;">Location:</label>
-                    <select id="freezer" name="freezer" required class="cs-select" style="width: 100%;">
+
+                    <div id="wiz-subcat-block" style="display:none;">
+                        <label class="wiz-label">Sub-category</label>
+                        <select id="wiz-subcat-select" class="cs-select" style="width:100%; margin-bottom:6px;"></select>
+                        <button type="button" id="wiz-add-subcat-toggle" class="wiz-link">+ Can't find it? Add a sub-category</button>
+                        <div id="wiz-add-subcat-form" style="display:none; margin:6px 0 12px; padding:8px; background:var(--secondary-bg);">
+                            <input type="text" id="wiz-new-subcat-name" class="cs-input" placeholder="New sub-category name" style="width:100%; margin-bottom:6px;">
+                            <label class="wiz-label" style="font-size:0.8rem;">Default quantity type</label>
+                            <select id="wiz-new-subcat-qty" class="cs-select" style="width:100%; margin-bottom:6px;">
+                                <option value="count">Count</option>
+                                <option value="weight">Weight</option>
+                                <option value="volume">Volume</option>
+                            </select>
+                            <div style="display:flex; gap:6px; justify-content:flex-end;">
+                                <button type="button" id="wiz-add-subcat-cancel" class="cs-btn">Cancel</button>
+                                <button type="button" id="wiz-add-subcat-save" class="cs-btn">Add</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="wiz-subsub-block" style="display:none;">
+                        <label class="wiz-label">Type <span style="opacity:.6; font-weight:normal;">(optional)</span></label>
+                        <select id="wiz-subsub-select" class="cs-select" style="width:100%; margin-bottom:6px;"></select>
+                        <button type="button" id="wiz-add-subsub-toggle" class="wiz-link">+ Add a type</button>
+                        <div id="wiz-add-subsub-form" style="display:none; margin:6px 0 12px; padding:8px; background:var(--secondary-bg);">
+                            <input type="text" id="wiz-new-subsub-name" class="cs-input" placeholder="New type name" style="width:100%; margin-bottom:6px;">
+                            <div style="display:flex; gap:6px; justify-content:flex-end;">
+                                <button type="button" id="wiz-add-subsub-cancel" class="cs-btn">Cancel</button>
+                                <button type="button" id="wiz-add-subsub-save" class="cs-btn">Add</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="wiz-prep-block" style="display:flex; gap:15px; flex-wrap:wrap; margin-top:6px;">
+                        <label id="wiz-lbl-skin"   style="display:none;"><input type="checkbox" data-prep="skin"   value="1"> Skin on</label>
+                        <label id="wiz-lbl-bone"   style="display:none;"><input type="checkbox" data-prep="bone"   value="1"> Bone in</label>
+                        <label id="wiz-lbl-minced" style="display:none;"><input type="checkbox" data-prep="minced" value="1"> Minced</label>
+                        <label id="wiz-lbl-grated" style="display:none;"><input type="checkbox" data-prep="grated" value="1"> Grated</label>
+                        <label id="wiz-lbl-cooked" style="display:none;"><input type="checkbox" data-prep="cooked" value="1"> Cooked</label>
+                    </div>
+                </section>
+
+                <!-- ===== STEP 2: QUANTITY ===== -->
+                <section class="wiz-step" data-step="2" style="display:none;">
+                    <label class="wiz-label">How do you want to record the amount?</label>
+                    <div id="wiz-qty-type-toggle" style="display:flex; gap:6px; margin-bottom:14px;">
+                        <button type="button" class="cs-btn wiz-qty-opt" data-qty="count">Count</button>
+                        <button type="button" class="cs-btn wiz-qty-opt" data-qty="weight">Weight</button>
+                        <button type="button" class="cs-btn wiz-qty-opt" data-qty="volume">Volume</button>
+                    </div>
+                    <label class="wiz-label" id="wiz-qty-value-label">Quantity</label>
+                    <div style="display:flex; gap:6px;">
+                        <input type="number" step="any" min="0" id="wiz-qty-input" class="cs-input" style="flex:1; min-width:0; font-size:1.2rem;" placeholder="1">
+                        <select id="wiz-qty-unit-select" class="cs-select" style="display:none; flex-shrink:0; width:70px; min-width:unset;"></select>
+                    </div>
+                </section>
+
+                <!-- ===== STEP 3: LOCATION ===== -->
+                <section class="wiz-step" data-step="3" style="display:none;">
+                    <label class="wiz-label">Freezer</label>
+                    <select id="wiz-freezer-select" class="cs-select" style="width:100%; margin-bottom:12px;">
                         <option value="">-- Freezer --</option>
                         {% for freezer in freezers %}
                             <option value="{{ freezer.id }}" data-drawers="{{ freezer.drawers }}">{{ freezer.name }}</option>
                         {% endfor %}
                     </select>
-                </div>
-                <div style="display: flex; gap: 10px;">
-                    <div style="flex: 1;">
-                        <label style="display: block; font-weight: bold; margin-bottom: 5px;">Drawer:</label>
-                        <select id="drawer" name="drawer" required class="cs-select" style="width: 100%;"></select>
-                    </div>
-                    <div style="flex: 1;">
-                        <label style="display: block; font-weight: bold; margin-bottom: 5px;">Qty:</label>
-                        <div style="display: flex; gap: 4px;">
-                            <input type="text" id="qty-number" class="cs-input" style="flex: 1; min-width: 0; font-size: 1.1rem;" placeholder="1">
-                            <select id="qty-unit" class="cs-select" style="display: none; flex-shrink: 0; min-width: unset; width: 58px;">
-                                <option value="g">g</option>
-                                <option value="kg">kg</option>
-                            </select>
-                        </div>
-                        <input type="hidden" name="quantity" id="qty-hidden" value="1">
-                    </div>
-                </div>
-                <div>
-                    <label style="display: block; font-weight: bold; margin-bottom: 5px;">Notes:</label>
-                    <textarea name="notes" rows="2" class="cs-input" style="width: 100%;" placeholder="Optional notes..."></textarea>
-                </div>
-                <div>
-                    <label style="display: block; font-weight: bold; margin-bottom: 5px;">Date added: <span style="font-weight: normal; opacity: 0.7;">(leave blank for today)</span></label>
-                    <input type="date" name="date_added" id="date-added" class="cs-input" style="width: 100%;">
-                </div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
-                    <label style="font-weight: bold; cursor: pointer;">
-                        <input type="checkbox" name="print_label" value="1" checked> Print QR Label
+                    <label class="wiz-label">Drawer</label>
+                    <select id="wiz-drawer-select" class="cs-select" style="width:100%;"></select>
+                </section>
+
+                <!-- ===== STEP 4: FINISH ===== -->
+                <section class="wiz-step" data-step="4" style="display:none;">
+                    <div id="wiz-summary" style="background:var(--secondary-bg); padding:8px 10px; margin-bottom:12px; font-size:0.95rem;"></div>
+                    <label class="wiz-label">Notes</label>
+                    <textarea id="wiz-notes" rows="2" class="cs-input" style="width:100%; margin-bottom:12px;" placeholder="Optional notes..."></textarea>
+                    <label class="wiz-label">Date added <span style="opacity:.6; font-weight:normal;">(blank = today)</span></label>
+                    <input type="date" id="wiz-date" class="cs-input" style="width:100%; margin-bottom:12px;">
+                    <label style="font-weight:bold; cursor:pointer;">
+                        <input type="checkbox" id="wiz-print" value="1" checked> Print QR Label
                     </label>
-                    <div style="display: flex; gap: 10px;">
-                        <button id="btn-cancel-modal" type="button" class="cs-btn">Cancel</button>
-                        <button type="submit" class="cs-btn">Save Item</button>
+                </section>
+
+                <!-- ===== NAV ===== -->
+                <div style="display:flex; justify-content:space-between; gap:10px; margin-top:16px;">
+                    <button type="button" id="wiz-back" class="cs-btn" style="visibility:hidden;">‹ Back</button>
+                    <div style="display:flex; gap:8px;">
+                        <button type="button" id="wiz-cancel" class="cs-btn">Cancel</button>
+                        <button type="button" id="wiz-next" class="cs-btn" disabled>Next ›</button>
+                        <button type="submit" id="wiz-finish" class="cs-btn" style="display:none;">Finalise &amp; print</button>
                     </div>
                 </div>
             </form>
@@ -326,9 +384,9 @@
         };
     </script>
     
-    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script src="{{ url_for('static', filename='html5-qrcode.min.js') }}" type="text/javascript"></script>
     <script src="{{ url_for('static', filename='print.js') }}"></script>
-    <script src="{{ url_for('static', filename='checkin.js') }}"></script>
+    <script src="{{ url_for('static', filename='checkin-wizard.js') }}"></script>
     <script src="{{ url_for('static', filename='inventory.js') }}"></script>
     <script src="{{ url_for('static', filename='scanner.js') }}"></script>
     <script src="{{ url_for('static', filename='search.js') }}"></script>

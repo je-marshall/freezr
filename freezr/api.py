@@ -2,7 +2,7 @@ import json
 import logging
 import datetime
 from flask import (
-    Blueprint, flash, request, jsonify, redirect, url_for, current_app
+    Blueprint, flash, g, request, jsonify, redirect, url_for, current_app
 )
 from freezr.db import get_db
 from freezr.auth import login_required
@@ -42,6 +42,53 @@ def category():
         except db.IntegrityError:
             error = f'Category not present'
             return json.dumps({'success' : False})
+
+@bp.route('/subcat', methods=('POST',))
+@login_required
+def add_subcat_json():
+    """Inline-add a sub-category during check-in, returning JSON so the wizard
+    never has to leave the modal."""
+    body = request.get_json(silent=True) or {}
+    name = (body.get('name') or '').strip()
+    cat_id = body.get('category_id')
+    qty_type = body.get('quantity_type') or 'count'
+    if qty_type not in ('count', 'weight', 'volume'):
+        qty_type = 'count'
+    if not name or not cat_id:
+        return jsonify({'success': False, 'message': 'Name and category are required.'}), 400
+
+    db = get_db()
+    if not db.execute('SELECT 1 FROM categories WHERE id = ? AND auth_id = ?', (cat_id, g.user['id'])).fetchone():
+        return jsonify({'success': False, 'message': 'Invalid category.'}), 400
+    cur = db.execute(
+        'INSERT INTO subcats (subcat, quantity_type, category_id, auth_id) VALUES (?, ?, ?, ?)',
+        (name, qty_type, cat_id, g.user['id'])
+    )
+    db.commit()
+    return jsonify({'success': True, 'id': cur.lastrowid, 'subcat': name,
+                    'category_id': cat_id, 'quantity_type': qty_type})
+
+
+@bp.route('/subsub', methods=('POST',))
+@login_required
+def add_subsub_json():
+    """Inline-add a type (sub-sub-category) during check-in, returning JSON."""
+    body = request.get_json(silent=True) or {}
+    name = (body.get('name') or '').strip()
+    subcat_id = body.get('subcat_id')
+    if not name or not subcat_id:
+        return jsonify({'success': False, 'message': 'Name and sub-category are required.'}), 400
+
+    db = get_db()
+    if not db.execute('SELECT 1 FROM subcats WHERE id = ? AND auth_id = ?', (subcat_id, g.user['id'])).fetchone():
+        return jsonify({'success': False, 'message': 'Invalid sub-category.'}), 400
+    cur = db.execute(
+        'INSERT INTO subsub (subsub, subcat_id, auth_id) VALUES (?, ?, ?)',
+        (name, subcat_id, g.user['id'])
+    )
+    db.commit()
+    return jsonify({'success': True, 'id': cur.lastrowid, 'subsub': name, 'subcat_id': subcat_id})
+
 
 @bp.route('/print/<int:id>', methods=('POST',))
 @login_required

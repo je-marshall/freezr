@@ -54,6 +54,9 @@ CREATE TABLE entries (
     grated BOOLEAN NOT NULL CHECK (grated IN (0, 1)) DEFAULT 0,
     cooked BOOLEAN NOT NULL CHECK (cooked IN (0, 1)) DEFAULT 0,
     quantity TEXT NOT NULL DEFAULT '1',
+    quantity_type TEXT NOT NULL DEFAULT 'count',
+    quantity_value REAL,
+    quantity_unit TEXT,
     notes TEXT,
     auth_id INTEGER NOT NULL REFERENCES user (id),
     created TIMESTAMP DEFAULT CURRENT_TIMESTAMP
