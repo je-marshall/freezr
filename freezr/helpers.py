@@ -8,7 +8,7 @@ from freezr.db import get_db
 def get_all_entries():
     db = get_db()
     all_entries = db.execute('''
-        SELECT e.id, e.created, e.quantity, e.skin, e.bone,
+        SELECT e.id, e.created, e.quantity, e.quantity_type, e.skin, e.bone,
                e.minced, e.grated, e.cooked, e.notes, e.auth_id,
                e.category_id, e.subcat_id, e.subsub AS subsub_id, e.freezer_id,
                c.category, s.subcat, u.subsub,
@@ -27,7 +27,7 @@ def get_entry(id, check_author=True):
     db = get_db()
     entry = db.execute(
         '''
-        SELECT e.id, e.created, e.quantity, e.skin, e.bone,
+        SELECT e.id, e.created, e.quantity, e.quantity_type, e.skin, e.bone,
                e.minced, e.grated, e.cooked, e.notes, e.auth_id,
                e.category_id, e.subcat_id, e.subsub AS subsub_id, e.freezer_id,
                c.category, s.subcat, u.subsub,
@@ -50,26 +50,58 @@ def get_entry(id, check_author=True):
 
     return entry
 
+# Name parts equal to this (case-insensitive) are dropped from descriptions —
+# "chicken other" / "beef other" read oddly on a label.
+SKIP_NAME_PARTS = {'other'}
+
+PREP_FLAGS = (
+    ('skin',   'skin on'),
+    ('bone',   'bone in'),
+    ('minced', 'minced'),
+    ('grated', 'grated'),
+    ('cooked', 'cooked'),
+)
+
+def build_description(entry):
+    """Canonical, human-readable name for an entry (used for both the on-screen
+    label and the printed QR label, so they always agree).
+
+    Accepts a sqlite Row or a dict with keys: quantity, skin, bone, minced,
+    grated, cooked, subcat, subsub and (optionally) category.
+    """
+    qty = str(entry['quantity'])
+    tokens = [(qty + 'x') if qty.isdigit() else qty]
+
+    for flag, word in PREP_FLAGS:
+        if entry[flag]:
+            tokens.append(word)
+
+    # Build the item name, dropping any part that is literally "other".
+    name_parts = []
+    for key in ('subcat', 'subsub'):
+        val = (entry[key] or '').strip() if entry[key] is not None else ''
+        if val and val.lower() not in SKIP_NAME_PARTS:
+            name_parts.append(val)
+    if not name_parts:
+        # Everything was "other" — fall back so the label is never nameless,
+        # preferring the broader category name over a literal "other".
+        fallback = ''
+        try:
+            fallback = (entry['category'] or '').strip()
+        except (KeyError, IndexError):
+            fallback = ''
+        if not fallback:
+            fallback = (entry['subcat'] or '').strip()
+        if fallback:
+            name_parts.append(fallback)
+    if name_parts:
+        tokens.append(' '.join(name_parts))
+
+    return ' '.join(tokens).strip()
+
 def generate_description(entries):
     for entry in entries:
-        qty = str(entry["quantity"])
-        desc_string = (qty + 'x ') if qty.isdigit() else (qty + ' ')
-        if entry['skin']:
-            desc_string += 'skin on '
-        if entry['bone']:
-            desc_string += 'bone in '
-        if entry['minced']:
-            desc_string += 'minced '
-        if entry['grated']:
-            desc_string += 'grated '
-        if entry['cooked']:
-            desc_string += 'cooked '
-        
-        desc_string += f'{entry["subcat"]}'
-        if entry["subsub"]:
-            desc_string += f' {entry["subsub"]}'
-            
-        entry['desc'] = desc_string
+        entry['desc'] = build_description(entry)
         entry['location'] = f"{entry['freezer_name']} - Drawer {entry['drawer']}"
         
         if isinstance(entry['created'], datetime.datetime):

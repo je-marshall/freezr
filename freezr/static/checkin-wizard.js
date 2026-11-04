@@ -77,6 +77,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const notesEl   = document.getElementById('wiz-notes');
     const dateEl    = document.getElementById('wiz-date');
     const printEl   = document.getElementById('wiz-print');
+    const copiesEl  = document.getElementById('wiz-copies');
+    const printPlural = document.getElementById('wiz-print-plural');
 
     // Hidden fields (the actual submitted values)
     const h = {
@@ -380,25 +382,37 @@ document.addEventListener('DOMContentLoaded', function () {
         return { subcatName, subsubName };
     }
 
+    function copiesCount() {
+        const n = parseInt(copiesEl && copiesEl.value, 10);
+        return (!isNaN(n) && n > 0) ? n : 1;
+    }
+
+    function updatePackHints() {
+        const n = copiesCount();
+        if (printPlural) printPlural.textContent = n > 1 ? ' (×' + n + ')' : '';
+    }
+
     function buildSummary() {
         const { subcatName, subsubName } = itemNames();
         const freezerName = (freezerSelect.value && freezerSelect.selectedOptions[0])
             ? freezerSelect.selectedOptions[0].textContent : '';
+        const n = copiesCount();
+        const packLine = n > 1
+            ? '<br><span style="opacity:.8;">' + n + ' separate packs — ' + n + ' labels</span>'
+            : '';
         summaryEl.innerHTML =
             '<strong>' + (h.quantity.value || '1') + '</strong> · ' +
             subcatName + (subsubName ? ' ' + subsubName : '') +
-            '<br><span style="opacity:.8;">' + freezerName + ' — drawer ' + (h.drawer.value || '') + '</span>';
+            '<br><span style="opacity:.8;">' + freezerName + ' — drawer ' + (h.drawer.value || '') + '</span>' +
+            packLine;
+        updatePackHints();
     }
+
+    if (copiesEl) copiesEl.addEventListener('input', () => { buildSummary(); });
 
     form.addEventListener('submit', async function (e) {
         e.preventDefault();
         updateQtyHidden();
-
-        const { subcatName, subsubName } = itemNames();
-        let desc = subcatName + (subsubName ? ' ' + subsubName : '');
-        const qty = (h.quantity.value || '1').trim();
-        const qtyPrefix = /^\d+$/.test(qty) ? qty + 'x' : qty;
-        desc = qtyPrefix + ' ' + desc;
 
         // Notes and date aren't hidden inputs — attach them to the payload.
         const formData = new FormData(form);
@@ -413,8 +427,13 @@ document.addEventListener('DOMContentLoaded', function () {
             });
             const result = await response.json();
             if (result.success) {
+                // Print one label per pack, using the server's canonical label
+                // text so skin/bone/etc. always appear and "other" is dropped.
                 if (printEl.checked && typeof window.triggerPrint === 'function') {
-                    await window.triggerPrint(result.entry_id, desc);
+                    const ids = result.entry_ids || [result.entry_id];
+                    for (const id of ids) {
+                        await window.triggerPrint(id, result.desc);
+                    }
                 }
                 window.location.reload();
             } else {

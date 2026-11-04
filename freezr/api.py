@@ -90,6 +90,44 @@ def add_subsub_json():
     return jsonify({'success': True, 'id': cur.lastrowid, 'subsub': name, 'subcat_id': subcat_id})
 
 
+@bp.route('/adjust/<int:id>', methods=('POST',))
+@login_required
+def adjust_quantity(id):
+    """Nudge the quantity of a counted item up or down (e.g. taking one slice of
+    bread out of a bag of four). Dropping to zero checks the item out."""
+    db = get_db()
+    body = request.get_json(silent=True) or {}
+    try:
+        delta = int(body.get('delta', 0))
+    except (TypeError, ValueError):
+        delta = 0
+
+    row = db.execute(
+        'SELECT quantity, quantity_type FROM entries WHERE id = ? AND auth_id = ?',
+        (id, g.user['id'])
+    ).fetchone()
+    if not row:
+        return jsonify({'success': False, 'message': 'Item not found.'}), 404
+
+    qty = str(row['quantity']).strip()
+    # Only plain counts can be stepped; weights/volumes ("500g") are freeform.
+    if row['quantity_type'] != 'count' or not qty.isdigit():
+        return jsonify({'success': False,
+                        'message': 'Quantity can only be adjusted for counted items.'}), 400
+
+    new_qty = int(qty) + delta
+    if new_qty <= 0:
+        db.execute('DELETE FROM entries WHERE id = ? AND auth_id = ?', (id, g.user['id']))
+        db.commit()
+        log.info('Entry id=%s checked out via quantity adjustment', id)
+        return jsonify({'success': True, 'checked_out': True})
+
+    db.execute('UPDATE entries SET quantity = ? WHERE id = ? AND auth_id = ?',
+               (str(new_qty), id, g.user['id']))
+    db.commit()
+    return jsonify({'success': True, 'checked_out': False, 'quantity': new_qty})
+
+
 @bp.route('/print/<int:id>', methods=('POST',))
 @login_required
 def print_item(id):
