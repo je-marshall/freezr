@@ -29,7 +29,15 @@
 
         <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #333;">
             <span style="opacity: 0.7;">Quantity</span>
+            {% if entry.quantity_type == 'count' %}
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <button type="button" id="qty-minus" class="cs-btn" style="width: 34px; height: 34px; font-weight: bold; font-size: 1.2rem; line-height: 1; padding: 0;">−</button>
+                <strong id="qty-value" style="min-width: 24px; text-align: center;">{{ entry.quantity }}</strong>
+                <button type="button" id="qty-plus" class="cs-btn" style="width: 34px; height: 34px; font-weight: bold; font-size: 1.2rem; line-height: 1; padding: 0;">+</button>
+            </div>
+            {% else %}
             <strong>{{ entry.quantity }}</strong>
+            {% endif %}
         </div>
 
         <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid #333;">
@@ -204,9 +212,7 @@
             const data = await res.json();
             if (data.success) {
                 if (formData.get('print_label') && typeof window.triggerPrint === 'function') {
-                    const qty = formData.get('quantity') || '1';
-                    const prefix = /^\d+$/.test(qty) ? qty + 'x' : qty;
-                    await window.triggerPrint(data.entry_id, prefix + ' ' + entryDesc.replace(/^\S+\s/, ''));
+                    await window.triggerPrint(data.entry_id, data.desc);
                 }
                 window.location.href = '{{ url_for("index") }}';
             } else {
@@ -223,6 +229,40 @@
             window.triggerPrint(entryId, entryDesc);
         }
     });
+
+    // Quantity stepper (counted items only) — e.g. taking one slice from a bag.
+    const qtyValueEl = document.getElementById('qty-value');
+    const qtyMinus   = document.getElementById('qty-minus');
+    const qtyPlus    = document.getElementById('qty-plus');
+
+    async function adjustQty(delta) {
+        qtyMinus.disabled = qtyPlus.disabled = true;
+        try {
+            const res = await fetch(`/api/adjust/${entryId}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ delta })
+            });
+            const data = await res.json();
+            if (!data.success) {
+                alert(data.message || 'Could not update quantity.');
+                return;
+            }
+            if (data.checked_out) {
+                // Last one taken — item is gone, back to the inventory.
+                window.location.href = '{{ url_for("index") }}';
+                return;
+            }
+            qtyValueEl.textContent = data.quantity;
+        } catch (err) {
+            alert('A server error occurred while updating quantity.');
+        } finally {
+            qtyMinus.disabled = qtyPlus.disabled = false;
+        }
+    }
+
+    if (qtyMinus) qtyMinus.addEventListener('click', () => adjustQty(-1));
+    if (qtyPlus)  qtyPlus.addEventListener('click',  () => adjustQty(1));
 </script>
 
 <script src="{{ url_for('static', filename='print.js') }}"></script>

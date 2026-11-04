@@ -46,21 +46,59 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!currentEntry) return;
 
             viewTitle.innerText = currentEntry.desc.toUpperCase();
-            
+
+            // Counted items get a −/+ stepper; weights/volumes stay static.
+            const isCount = currentEntry.quantity_type === 'count'
+                && /^\d+$/.test(String(currentEntry.quantity).trim());
+            const qtyCell = isCount
+                ? `<div style="display:flex; align-items:center; gap:12px;">
+                       <button type="button" id="view-qty-minus" class="cs-btn" style="width:30px; height:30px; font-weight:bold; font-size:1.1rem; line-height:1; padding:0;">−</button>
+                       <strong id="view-qty-value" style="min-width:20px; text-align:center;">${currentEntry.quantity}</strong>
+                       <button type="button" id="view-qty-plus" class="cs-btn" style="width:30px; height:30px; font-weight:bold; font-size:1.1rem; line-height:1; padding:0;">+</button>
+                   </div>`
+                : `<strong>${currentEntry.quantity}</strong>`;
+
             // Build details list
             let html = `
                 <div style="display:flex; justify-content:space-between; border-bottom:1px solid #444; padding:5px 0;">
                     <span>Location:</span><strong>${currentEntry.location}</strong>
                 </div>
-                <div style="display:flex; justify-content:space-between; border-bottom:1px solid #444; padding:5px 0;">
-                    <span>Quantity:</span><strong>${currentEntry.quantity}</strong>
+                <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #444; padding:5px 0;">
+                    <span>Quantity:</span>${qtyCell}
                 </div>
                 <div style="display:flex; justify-content:space-between; border-bottom:1px solid #444; padding:5px 0;">
                     <span>Added:</span><strong>${new Date(currentEntry.created).toLocaleDateString('en-GB')}</strong>
                 </div>
             `;
-            
+
             viewFields.innerHTML = html;
+
+            if (isCount) {
+                const minus = document.getElementById('view-qty-minus');
+                const plus  = document.getElementById('view-qty-plus');
+                const valEl = document.getElementById('view-qty-value');
+                const step = async (delta) => {
+                    minus.disabled = plus.disabled = true;
+                    try {
+                        const res = await fetch(`/api/adjust/${currentEntry.id}`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ delta })
+                        });
+                        const data = await res.json();
+                        if (!data.success) { alert(data.message || 'Could not update quantity.'); return; }
+                        if (data.checked_out) { window.location.reload(); return; }
+                        currentEntry.quantity = data.quantity;
+                        valEl.textContent = data.quantity;
+                    } catch (err) {
+                        alert('A server error occurred while updating quantity.');
+                    } finally {
+                        minus.disabled = plus.disabled = false;
+                    }
+                };
+                minus.addEventListener('click', () => step(-1));
+                plus.addEventListener('click',  () => step(1));
+            }
 
             if (currentEntry.notes) {
                 viewNotesCont.style.display = 'block';
@@ -170,9 +208,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const result = await response.json();
                 if (result.success) {
                     if (formData.get('print_label') && typeof window.triggerPrint === 'function') {
-                        const qty = formData.get('quantity') || '1';
-                        const qtyPrefix = /^\d+$/.test(qty) ? qty + 'x' : qty;
-                        await window.triggerPrint(result.entry_id, qtyPrefix + ' ' + (currentEntry ? currentEntry.desc.replace(/^\S+\s/, '') : ''));
+                        await window.triggerPrint(result.entry_id, result.desc);
                     }
                     window.location.reload();
                 } else {

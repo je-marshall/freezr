@@ -1,8 +1,11 @@
 from flask import Blueprint, g, request, jsonify
 from freezr.db import get_db
 from freezr.auth import login_required
+from freezr.helpers import get_entry, build_description
 
 bp = Blueprint('checkin', __name__, url_prefix='/checkin')
+
+MAX_COPIES = 50
 
 @bp.route('/new', methods=('POST',))
 @login_required
@@ -24,6 +27,14 @@ def checkin():
         quantity_value = float(quantity_value_raw) if quantity_value_raw not in (None, '') else None
     except (TypeError, ValueError):
         quantity_value = None
+
+    # Batch check-in: several separate packs of the same item, one entry (and
+    # one QR label) each.
+    try:
+        copies = int(request.form.get('copies', 1) or 1)
+    except (TypeError, ValueError):
+        copies = 1
+    copies = max(1, min(copies, MAX_COPIES))
 
     skin   = 1 if request.form.get('skin')   else 0
     bone   = 1 if request.form.get('bone')   else 0
@@ -51,22 +62,35 @@ def checkin():
                 return jsonify({'success': False, 'message': 'Invalid sub-category.'}), 400
             if not db.execute('SELECT 1 FROM freezers WHERE id = ? AND auth_id = ?', (freezer, g.user['id'])).fetchone():
                 return jsonify({'success': False, 'message': 'Invalid freezer.'}), 400
-            if date_added:
-                cursor = db.execute(
-                    '''INSERT INTO entries
-                    (category_id, subcat_id, subsub, freezer_id, drawer, skin, bone, minced, grated, cooked, notes, quantity, quantity_type, quantity_value, quantity_unit, auth_id, created)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                    (category, subcat, subsub, freezer, drawer, skin, bone, minced, grated, cooked, notes, quantity, quantity_type, quantity_value, quantity_unit, g.user['id'], date_added),
-                )
-            else:
-                cursor = db.execute(
-                    '''INSERT INTO entries
-                    (category_id, subcat_id, subsub, freezer_id, drawer, skin, bone, minced, grated, cooked, notes, quantity, quantity_type, quantity_value, quantity_unit, auth_id)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-                    (category, subcat, subsub, freezer, drawer, skin, bone, minced, grated, cooked, notes, quantity, quantity_type, quantity_value, quantity_unit, g.user['id']),
-                )
+            entry_ids = []
+            for _ in range(copies):
+                if date_added:
+                    cursor = db.execute(
+                        '''INSERT INTO entries
+                        (category_id, subcat_id, subsub, freezer_id, drawer, skin, bone, minced, grated, cooked, notes, quantity, quantity_type, quantity_value, quantity_unit, auth_id, created)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                        (category, subcat, subsub, freezer, drawer, skin, bone, minced, grated, cooked, notes, quantity, quantity_type, quantity_value, quantity_unit, g.user['id'], date_added),
+                    )
+                else:
+                    cursor = db.execute(
+                        '''INSERT INTO entries
+                        (category_id, subcat_id, subsub, freezer_id, drawer, skin, bone, minced, grated, cooked, notes, quantity, quantity_type, quantity_value, quantity_unit, auth_id)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+                        (category, subcat, subsub, freezer, drawer, skin, bone, minced, grated, cooked, notes, quantity, quantity_type, quantity_value, quantity_unit, g.user['id']),
+                    )
+                entry_ids.append(cursor.lastrowid)
             db.commit()
-            return jsonify({'success': True, 'entry_id': cursor.lastrowid})
+
+            # Build the canonical label text server-side so every print path
+            # (wizard, copy, item page) prints an identical, correct label.
+            desc = build_description(get_entry(entry_ids[0], check_author=False))
+            return jsonify({
+                'success': True,
+                'entry_id': entry_ids[0],
+                'entry_ids': entry_ids,
+                'count': len(entry_ids),
+                'desc': desc,
+            })
 
         except Exception as e:
             error = f'An error occurred while saving the entry: {e}'
